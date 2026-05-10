@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Iniciando Protocolo Pre-Push (JhosuaComercial)..."
+
+# 1. En este caso es estático, no hay build de npm.
+# Pero si lo hubiera, aquí iría: npm run build
+
+# 2. Sincronizar con Git
+echo "📤 Sincronizando repositorio..."
+git add .
+git commit -m "deploy: update maintenance $(date +'%Y-%m-%d %H:%M:%S')" || echo "ℹ️ No hay cambios para commitear."
+
+echo "🛰️  Enviando a GitHub..."
+git push origin main
+
+echo "✅ Proceso local completado."
+echo "🚀 Ahora puedes ir al VPS, entrar en la carpeta y ejecutar ./deploy.sh"

@@ -1,28 +1,32 @@
 #!/bin/bash
+# Script de Deployment - JhosuaComercial (Protocolo Renace)
+# Ejecutar en el servidor: /opt/jhosuacom-maintenance
 set -e
-VPS="root@45.9.191.18"
-REMOTE_DIR="/opt/jhosuacom-maintenance"
+
 STACK="jhosuacom"
-TAG="v-$(date +%M%S)"
-IMAGE="jhosuacom-maintenance:$TAG"
+BRANCH="main"
 
-echo "🏗️  Compilando local..."
-docker build -t $IMAGE .
-docker save $IMAGE | gzip > maintenance.tar.gz
+echo "🚀 Iniciando deployment de JhosuaComercial (Docker Swarm)..."
 
-echo "📡  Enviando..."
-ssh $VPS "mkdir -p $REMOTE_DIR"
-scp maintenance.tar.gz $VPS:$REMOTE_DIR/
-cat docker-compose.yml | sed "s/latest/$TAG/" > docker-compose.v.yml
-scp docker-compose.v.yml $VPS:$REMOTE_DIR/docker-compose.yml
-rm maintenance.tar.gz docker-compose.v.yml
+# 1. Pull latest changes
+echo "📥 1/4 - Sincronizando con Git..."
+git fetch origin
+git reset --hard origin/$BRANCH
 
-echo "🚀  Desplegando..."
-ssh $VPS bash << REMOTE
-  docker load < maintenance.tar.gz
-  rm maintenance.tar.gz
-  docker stack deploy --detach=true -c docker-compose.yml $STACK
-  docker service update --force ${STACK}_web
-  docker image prune -f
-  echo "✅ Despliegue completado."
-REMOTE
+# 2. Build image locally on VPS (Solo copia archivos, no consume recursos)
+echo "🔨 2/4 - Building imagen Docker..."
+docker compose build --no-cache
+
+# 3. Ensure Network
+echo "🌐 3/4 - Asegurando red RenaceNet..."
+docker network ls | grep RenaceNet > /dev/null || docker network create --driver overlay RenaceNet
+
+# 4. Deploy Stack
+echo "🚀 4/4 - Desplegando Stack..."
+docker stack deploy -c docker-compose.yml $STACK
+
+# 5. Force update para asegurar que tome la nueva imagen local
+echo "🔄 Forzando actualización de servicios..."
+docker service update --force ${STACK}_web
+
+echo "✨ Deployment completado con éxito!"
