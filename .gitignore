@@ -1,0 +1,10 @@
+.DS_Store
+*.tar.gz
+*.v.yml
+node_modules/
+dist/
+.next/
+.env
+.env.local
+docker-compose.v.yml
+maintenance.tar.gz

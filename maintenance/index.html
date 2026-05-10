@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Próximamente — JH Hogar | Artículos y Electrodomésticos</title>
+<meta name="description" content="JhosuaComercial está siendo renovado por Renace.tech. Volvemos pronto con una experiencia premium."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#C9952A;--gl:#F5C842;--gd:#7A5010;
+  --cr:#D4DCE8;--cm:#8A94A4;
+  --bg:#080808;--bg2:#111;--bg3:#181818;
+  --rb:#1B6CF2;--rc:#0EDFFF;
+  --mx:0.5;--my:0.5
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);color:var(--cr);
+  min-height:100vh;overflow-x:hidden;
+  cursor:none
+}
+
+/* ── CURSOR ── */
+#cur,#cur2{
+  position:fixed;border-radius:50%;
+  pointer-events:none;z-index:9999;
+  mix-blend-mode:difference;
+  will-change:transform
+}
+#cur{
+  width:10px;height:10px;
+  background:var(--gl);
+  transform:translate(-50%,-50%)
+}
+#cur2{
+  width:36px;height:36px;
+  border:1px solid rgba(245,200,66,.4);
+  transform:translate(-50%,-50%);
+  transition:width .2s,height .2s,border-color .2s
+}
+body:has(a:hover) #cur2,
+body:has(button:hover) #cur2{
+  width:56px;height:56px;
+  border-color:var(--gl)
+}
+
+/* ── INTERACTIVE LIGHT LAYER ── */
+#light{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(
+    600px circle at calc(var(--mx)*100%) calc(var(--my)*100%),
+    rgba(201,149,42,.13) 0%,
+    rgba(201,149,42,.04) 40%,
+    transparent 70%
+  );
+  transition:background .05s linear
+}
+
+/* ── GRID ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(201,149,42,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(201,149,42,.035) 1px,transparent 1px);
+  background-size:64px 64px;
+  pointer-events:none;z-index:0;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 40%,transparent 100%)
+}
+
+/* ── SCANLINES ── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);
+  pointer-events:none;z-index:1
+}
+
+/* ── LAYOUT ── */
+.wrap{
+  position:relative;z-index:2;
+  min-height:100vh;
+  display:grid;
+  grid-template-rows:auto 1fr auto
+}
+
+/* ── HEADER ── */
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:22px 48px;
+  border-bottom:1px solid rgba(201,149,42,.12);
+  backdrop-filter:blur(6px)
+}
+.renace-brand{
+  display:flex;align-items:center;gap:14px;
+  text-decoration:none
+}
+.renace-brand img{
+  height:28px;width:auto;
+  filter:brightness(.9);
+  transition:filter .2s
+}
+.renace-brand:hover img{filter:brightness(1.1)}
+.by-label{
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:600;
+  letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--cm);line-height:1;
+  padding-right:14px;
+  border-right:1px solid rgba(201,149,42,.2)
+}
+.pill{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 16px;
+  border:1px solid rgba(245,200,66,.22);
+  border-radius:100px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--gl)
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--gl);
+  box-shadow:0 0 8px var(--gl);
+  animation:blink 2s ease-in-out infinite
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── MAIN ── */
+main{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:64px 24px;
+  gap:0
+}
+
+/* ── LOGO ── */
+.logo-wrap{
+  position:relative;
+  margin-bottom:52px;
+  animation:drop-in 1s cubic-bezier(.16,1,.3,1) both
+}
+@keyframes drop-in{from{opacity:0;transform:translateY(-40px) scale(.88)}to{opacity:1;transform:none}}
+.logo-ring{
+  position:absolute;inset:-20px;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent,rgba(245,200,66,.5) 40%,rgba(201,149,42,.3) 60%,transparent);
+  filter:blur(16px);
+  animation:spin 7s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo-img{
+  width:190px;height:190px;
+  border-radius:22px;
+  object-fit:contain;
+  position:relative;z-index:1;
+  filter:drop-shadow(0 0 48px rgba(201,149,42,.55));
+  transition:filter .3s,transform .3s
+}
+.logo-img:hover{
+  filter:drop-shadow(0 0 64px rgba(245,200,66,.75));
+  transform:scale(1.04)
+}
+
+/* ── TEXT ── */
+.eyebrow{
+  font-family:'Rajdhani',sans-serif;
+  font-size:11px;font-weight:700;
+  letter-spacing:5px;text-transform:uppercase;
+  color:var(--g);margin-bottom:18px;
+  opacity:0;animation:up .8s .35s cubic-bezier(.16,1,.3,1) forwards
+}
+h1{
+  font-family:'Bebas Neue',cursive;
+  font-size:clamp(56px,11vw,128px);
+  line-height:.9;letter-spacing:2px;
+  color:var(--cr);margin-bottom:6px;
+  opacity:0;animation:up .8s .5s cubic-bezier(.16,1,.3,1) forwards
+}
+h1 span{
+  display:block;
+  background:linear-gradient(140deg,var(--gl) 0%,var(--g) 55%,var(--gd) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 2px 24px rgba(201,149,42,.4))
+}
+.sub{
+  font-size:clamp(13px,1.8vw,17px);
+  font-weight:300;color:var(--cm);
+  max-width:460px;line-height:1.75;
+  margin-bottom:60px;
+  opacity:0;animation:up .8s .65s cubic-bezier(.16,1,.3,1) forwards
+}
+.sub strong{color:var(--gl)}
+@keyframes up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* ── COUNTDOWN ── */
+.cd-wrap{
+  margin-bottom:52px;
+  opacity:0;animation:up .8s .8s cubic-bezier(.16,1,.3,1) forwards
+}
+.cd-lbl{
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;
+  color:var(--cm);margin-bottom:18px
+}
+.cd{display:flex;gap:14px;justify-content:center}
+.cd-u{display:flex;flex-direction:column;align-items:center;gap:8px}
+.cd-box{
+  width:78px;height:78px;
+  background:var(--bg2);
+  border:1px solid rgba(201,149,42,.18);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+  transition:border-color .3s,box-shadow .3s
+}
+.cd-box::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(201,149,42,.07) 0%,transparent 60%)
+}
+.cd-box:hover{border-color:rgba(245,200,66,.4);box-shadow:0 0 20px rgba(201,149,42,.2)}
+.cd-n{
+  font-family:'Bebas Neue',cursive;
+  font-size:38px;line-height:1;
+  color:var(--gl);
+  text-shadow:0 0 30px rgba(245,200,66,.45);
+  position:relative;z-index:1
+}
+.cd-t{
+  font-family:'Rajdhani',sans-serif;
+  font-size:9px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--cm)
+}
+
+/* ── PROGRESS ── */
+.prog{
+  width:100%;max-width:440px;
+  margin-bottom:48px;
+  opacity:0;animation:up .8s .95s cubic-bezier(.16,1,.3,1) forwards
+}
+.prog-head{
+  display:flex;justify-content:space-between;
+  margin-bottom:10px
+}
+.prog-title{
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--cm)
+}
+.prog-pct{
+  font-family:'Bebas Neue',cursive;
+  font-size:20px;color:var(--gl)
+}
+.prog-track{
+  height:3px;background:rgba(255,255,255,.06);
+  border-radius:100px;overflow:hidden
+}
+.prog-fill{
+  height:100%;width:0;
+  background:linear-gradient(90deg,var(--gd),var(--gl));
+  border-radius:100px;
+  box-shadow:0 0 12px rgba(245,200,66,.5);
+  animation:fill-anim 2s 1.6s cubic-bezier(.16,1,.3,1) forwards
+}
+@keyframes fill-anim{to{width:68%}}
+
+/* ── DIVIDER ── */
+.divider{
+  width:100px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--g),transparent);
+  margin:0 auto 52px;
+  opacity:0;animation:up .8s 1.05s cubic-bezier(.16,1,.3,1) forwards
+}
+
+/* ── FEATURES ── */
+.feats{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border:1px solid rgba(201,149,42,.14);
+  border-radius:14px;overflow:hidden;
+  max-width:680px;width:100%;
+  margin-bottom:60px;
+  opacity:0;animation:up .8s 1.1s cubic-bezier(.16,1,.3,1) forwards
+}
+.feat{
+  padding:24px 18px;
+  position:relative;
+  transition:background .25s
+}
+.feat:not(:last-child){border-right:1px solid rgba(201,149,42,.14)}
+.feat:hover{background:rgba(201,149,42,.05)}
+.feat-ico{font-size:26px;margin-bottom:10px;display:block}
+.feat-h{
+  font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:700;
+  letter-spacing:1px;color:var(--gl);margin-bottom:5px
+}
+.feat-p{font-size:11px;color:var(--cm);line-height:1.55}
+
+/* ── NOTIFY ── */
+.notify{
+  width:100%;max-width:430px;margin-bottom:64px;
+  opacity:0;animation:up .8s 1.25s cubic-bezier(.16,1,.3,1) forwards
+}
+.notify-l{
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;
+  color:var(--cm);margin-bottom:12px
+}
+.notify-row{display:flex;gap:8px}
+.notify-in{
+  flex:1;background:var(--bg2);
+  border:1px solid rgba(201,149,42,.18);
+  border-radius:10px;padding:13px 16px;
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  color:var(--cr);outline:none;
+  transition:border-color .2s,box-shadow .2s
+}
+.notify-in::placeholder{color:var(--cm);opacity:.5}
+.notify-in:focus{
+  border-color:rgba(201,149,42,.45);
+  box-shadow:0 0 0 3px rgba(201,149,42,.07)
+}
+.notify-btn{
+  padding:13px 22px;
+  background:linear-gradient(135deg,var(--gl),var(--g));
+  border:none;border-radius:10px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--bg);cursor:pointer;white-space:nowrap;
+  transition:transform .15s,box-shadow .15s
+}
+.notify-btn:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(201,149,42,.35)}
+.notify-btn:active{transform:none}
+.notify-ok{
+  display:none;margin-top:10px;
+  font-size:12px;color:var(--gl);
+  font-family:'Rajdhani',sans-serif;letter-spacing:1px
+}
+
+/* ── FOOTER ── */
+footer{
+  position:relative;z-index:2;
+  border-top:1px solid rgba(201,149,42,.1);
+  padding:22px 48px;
+  display:flex;justify-content:space-between;
+  align-items:center;flex-wrap:wrap;gap:10px
+}
+.copy{font-size:11px;color:var(--cm);opacity:.55}
+.made{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:10px;font-weight:600;
+  letter-spacing:2px;text-transform:uppercase;color:var(--cm)
+}
+.made img{height:18px;width:auto;opacity:.75;transition:opacity .2s}
+.made a:hover img{opacity:1}
+.made a{display:flex;align-items:center}
+
+/* ── PARTICLES (gold dots) ── */
+.pts{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.pt{
+  position:absolute;border-radius:50%;
+  background:var(--gl);opacity:0;
+  animation:float var(--d) var(--dl) ease-in infinite
+}
+@keyframes float{
+  0%{opacity:0;transform:translateY(110vh) translateX(0)}
+  10%{opacity:.5}90%{opacity:.2}
+  100%{opacity:0;transform:translateY(-5vh) translateX(var(--x))}
+}
+
+/* ── APPLIANCE FLOATERS ── */
+.apts{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.apt{
+  position:absolute;bottom:-80px;
+  font-size:var(--fs,28px);
+  opacity:0;user-select:none;
+  filter:grayscale(30%) sepia(20%) brightness(.85);
+  animation:afloat var(--d) var(--dl) ease-in infinite;
+  will-change:transform,opacity
+}
+@keyframes afloat{
+  0%  {opacity:0;  transform:translateY(0)   translateX(0)  rotate(0deg)}
+  8%  {opacity:var(--op,.18)}
+  92% {opacity:var(--op,.18)}
+  100%{opacity:0;  transform:translateY(calc(-105vh)) translateX(var(--x)) rotate(var(--r,6deg))}
+}
+
+/* ── SCROLL PARALLAX LAYER ── */
+.parallax-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(
+    900px circle at 50% calc(30% + var(--sy,0) * 1px),
+    rgba(201,149,42,.1) 0%,
+    transparent 65%
+  );
+  will-change:background
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  header{padding:16px 20px}
+  .by-label{display:none}
+  footer{padding:20px;justify-content:center;text-align:center}
+  .feats{grid-template-columns:1fr}
+  .feat:not(:last-child){border-right:none;border-bottom:1px solid rgba(201,149,42,.14)}
+  .cd-box{width:64px;height:64px}
+  .cd-n{font-size:32px}
+  .cd{gap:10px}
+  .notify-row{flex-direction:column}
+  body{cursor:auto}
+  #cur,#cur2{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cur"></div>
+<div id="cur2"></div>
+
+<!-- LIGHT -->
+<div id="light"></div>
+<div class="parallax-bg" id="pbg"></div>
+
+<!-- PARTICLES -->
+<div class="pts" id="pts"></div>
+<!-- APPLIANCE FLOATERS -->
+<div class="apts" id="apts"></div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <a href="https://renace.tech" target="_blank" rel="noopener" class="renace-brand">
+      <span class="by-label">Desarrollado por</span>
+      <img src="renace.svg" alt="Renace.tech" loading="eager"/>
+    </a>
+    <div class="pill"><span class="dot"></span>En Construcción</div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- LOGO JH -->
+    <div class="logo-wrap" id="logoWrap">
+      <div class="logo-ring"></div>
+      <img src="logo.png" alt="JH Hogar — Artículos y Electrodomésticos para el Hogar" class="logo-img"/>
+    </div>
+
+    <p class="eyebrow">Sitio Oficial · Próximamente</p>
+
+    <h1>Algo grande<br/><span>viene para ti</span></h1>
+
+    <p class="sub">
+      Estamos construyendo la nueva presencia digital de
+      <strong>JhosuaComercial</strong>.
+      Artículos y electrodomésticos de calidad, ahora en línea.
+    </p>
+
+    <!-- COUNTDOWN -->
+    <div class="cd-wrap">
+      <p class="cd-lbl">Lanzamiento estimado</p>
+      <div class="cd">
+        <div class="cd-u"><div class="cd-box"><span class="cd-n" id="cdd">--</span></div><span class="cd-t">Días</span></div>
+        <div class="cd-u"><div class="cd-box"><span class="cd-n" id="cdh">--</span></div><span class="cd-t">Horas</span></div>
+        <div class="cd-u"><div class="cd-box"><span class="cd-n" id="cdm">--</span></div><span class="cd-t">Min</span></div>
+        <div class="cd-u"><div class="cd-box"><span class="cd-n" id="cds">--</span></div><span class="cd-t">Seg</span></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="prog">
+      <div class="prog-head">
+        <span class="prog-title">Progreso del desarrollo</span>
+        <span class="prog-pct">68%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill"></div></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- FEATURES -->
+    <div class="feats">
+      <div class="feat">
+        <span class="feat-ico">🏠</span>
+        <div class="feat-h">Catálogo Completo</div>
+        <p class="feat-p">Electrodomésticos, muebles y artículos premium para tu hogar</p>
+      </div>
+      <div class="feat">
+        <span class="feat-ico">🚚</span>
+        <div class="feat-h">Entrega Rápida</div>
+        <p class="feat-p">Despacho a domicilio en toda la República Dominicana</p>
+      </div>
+      <div class="feat">
+        <span class="feat-ico">🛡️</span>
+        <div class="feat-h">Garantía Oficial</div>
+        <p class="feat-p">Productos originales con garantía directa del fabricante</p>
+      </div>
+    </div>
+
+    <!-- NOTIFY -->
+    <div class="notify">
+      <p class="notify-l">Avísame cuando estemos listos</p>
+      <div class="notify-row">
+        <input id="em" type="email" class="notify-in" placeholder="tucorreo@ejemplo.com" autocomplete="email"/>
+        <button class="notify-btn" id="nb">Notificar</button>
+      </div>
+      <p class="notify-ok" id="ok">✦ ¡Registrado! Te avisaremos al lanzar.</p>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p class="copy">© 2025 JhosuaComercial · Todos los derechos reservados</p>
+    <div class="made">
+      Powered by
+      <a href="https://renace.tech" target="_blank" rel="noopener">
+        <img src="renace.svg" alt="Renace.tech"/>
+      </a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// ── CURSOR ──
+const cur  = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function loop(){
+  cx+=(mx-cx)*.18; cy+=(my-cy)*.18;
+  cur.style.left  = mx+'px'; cur.style.top  = my+'px';
+  cur2.style.left = cx+'px'; cur2.style.top = cy+'px';
+  requestAnimationFrame(loop);
+})();
+
+// ── MOUSE LIGHT ──
+const light = document.getElementById('light');
+document.addEventListener('mousemove',e=>{
+  const rx = e.clientX/window.innerWidth;
+  const ry = e.clientY/window.innerHeight;
+  document.documentElement.style.setProperty('--mx',rx);
+  document.documentElement.style.setProperty('--my',ry);
+});
+
+// ── LOGO PARALLAX ON MOUSE ──
+const logoWrap = document.getElementById('logoWrap');
+document.addEventListener('mousemove',e=>{
+  const dx=(e.clientX/window.innerWidth-.5)*18;
+  const dy=(e.clientY/window.innerHeight-.5)*12;
+  logoWrap.style.transform=`translate(${dx}px,${dy}px)`;
+});
+
+// ── SCROLL PARALLAX ──
+const pbg = document.getElementById('pbg');
+window.addEventListener('scroll',()=>{
+  const sy=window.scrollY;
+  pbg.style.setProperty('--sy',sy*.4);
+  // Subtle grid compression on scroll
+  document.documentElement.style.setProperty(
+    '--grid-scale', 1 + sy*0.0002
+  );
+},{passive:true});
+
+// ── COUNTDOWN ──
+const target=new Date();target.setDate(target.getDate()+30);
+const fmt=n=>String(n).padStart(2,'0');
+function tick(){
+  const d=target-new Date();
+  if(d<=0)return;
+  document.getElementById('cdd').textContent=fmt(Math.floor(d/864e5));
+  document.getElementById('cdh').textContent=fmt(Math.floor(d%864e5/36e5));
+  document.getElementById('cdm').textContent=fmt(Math.floor(d%36e5/6e4));
+  document.getElementById('cds').textContent=fmt(Math.floor(d%6e4/1e3));
+}
+tick();setInterval(tick,1000);
+
+// ── NOTIFY ──
+document.getElementById('nb').addEventListener('click',()=>{
+  const v=document.getElementById('em').value.trim();
+  const inp=document.getElementById('em');
+  if(!v||!v.includes('@')){
+    inp.style.borderColor='rgba(255,80,80,.5)';
+    setTimeout(()=>inp.style.borderColor='',1500);
+    return;
+  }
+  document.getElementById('ok').style.display='block';
+  inp.value='';
+});
+
+// ── GOLD PARTICLES ──
+const pts=document.getElementById('pts');
+for(let i=0;i<22;i++){
+  const p=document.createElement('div');
+  p.className='pt';
+  const s=1+Math.random()*2.5;
+  p.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}vw;--d:${7+Math.random()*12}s;--dl:${Math.random()*9}s;--x:${(Math.random()*100-50).toFixed(0)}px`;
+  pts.appendChild(p);
+}
+
+// ── APPLIANCE FLOATERS ──
+const APPLIANCES=['📺','❄️','🫙','🍳','🧺','🔌','💡','🪣','🛒','🫧','📻','🖨️'];
+const apts=document.getElementById('apts');
+const isMobile=window.innerWidth<640;
+const count=isMobile?8:16;
+for(let i=0;i<count;i++){
+  const a=document.createElement('div');
+  a.className='apt';
+  a.textContent=APPLIANCES[i%APPLIANCES.length];
+  const sz=isMobile?(18+Math.random()*12):(20+Math.random()*18);
+  const op=(0.10+Math.random()*0.12).toFixed(2);
+  const dur=(14+Math.random()*18).toFixed(1);
+  const delay=(Math.random()*16).toFixed(1);
+  const drift=((Math.random()*80-40)).toFixed(0);
+  const rot=((Math.random()*14-7)).toFixed(1);
+  const left=(Math.random()*92+2).toFixed(1);
+  a.style.cssText=`left:${left}%;--fs:${sz}px;--op:${op};--d:${dur}s;--dl:${delay}s;--x:${drift}px;--r:${rot}deg`;
+  apts.appendChild(a);
+}
+
+// ── INTERSECTION OBSERVER for scroll reveals ──
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.style.opacity='1';
+      e.target.style.transform='translateY(0)';
+    }
+  });
+},{threshold:.15});
+document.querySelectorAll('.feats,.notify,.prog').forEach(el=>{
+  el.style.transition='opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1)';
+  observer.observe(el);
+});
+</script>
+</body>
+</html>

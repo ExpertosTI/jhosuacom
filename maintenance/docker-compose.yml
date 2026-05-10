@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web:
+    image: jhosuacom-maintenance:latest
+    build: .
+    networks:
+      - RenaceNet
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+      labels:
+        # ── HTTP → HTTPS redirect ──
+        - "traefik.enable=true"
+        - "traefik.http.routers.jhosuacom-http.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosuacom-http.entrypoints=web"
+        - "traefik.http.routers.jhosuacom-http.middlewares=jhosuacom-https-redirect"
+        - "traefik.http.middlewares.jhosuacom-https-redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.jhosuacom-https-redirect.redirectscheme.permanent=true"
+        # ── HTTPS ──
+        - "traefik.http.routers.jhosuacom.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosuacom.entrypoints=websecure"
+        - "traefik.http.routers.jhosuacom.tls=true"
+        - "traefik.http.routers.jhosuacom.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.jhosuacom.loadbalancer.server.port=80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  RenaceNet:
+    external: true
