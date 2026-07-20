@@ -26,8 +26,8 @@ services:
       - ADMIN_NOTIFY_PHONES=${ADMIN_NOTIFY_PHONES:-}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@jhhogar.com}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - RUN_DB_PUSH=${RUN_DB_PUSH:-true}
-      - RUN_DB_SEED=${RUN_DB_SEED:-true}
+      - RUN_DB_PUSH=${RUN_DB_PUSH:-false}
+      - RUN_DB_SEED=${RUN_DB_SEED:-false}
     networks:
       - RenaceNet
     healthcheck:
@@ -54,8 +54,8 @@ services:
         order: start-first
       resources:
         limits:
-          cpus: "0.50"
-          memory: "768M"
+          cpus: "0.75"
+          memory: "1536M"
       # API solo interna (la web hace proxy /api → jhosuacom_api)
       # Sin labels Traefik públicas: evita 404 de Next cuando PathPrefix falla
 
