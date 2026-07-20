@@ -29,20 +29,16 @@ services:
     networks:
       - RenaceNet
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'node -e "require(\'http\').get(\'http://127.0.0.1:3000/api/health\',r=>process.exit(r.statusCode===200?0:1)).on(\'error\',()=>process.exit(1))"',
-        ]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 90s
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     deploy:
       replicas: 1
       restart_policy:
@@ -56,20 +52,20 @@ services:
         order: start-first
       resources:
         limits:
-          cpus: '0.50'
-          memory: 768M
+          cpus: "0.50"
+          memory: "768M"
       labels:
-        - 'traefik.enable=true'
-        - 'traefik.docker.network=RenaceNet'
-        - 'traefik.http.routers.jhosua-api-http.rule=Host(`api.jhosuacomercial.com`)'
-        - 'traefik.http.routers.jhosua-api-http.entrypoints=web'
-        - 'traefik.http.routers.jhosua-api-http.middlewares=jhosua-api-redirect'
-        - 'traefik.http.middlewares.jhosua-api-redirect.redirectscheme.scheme=https'
-        - 'traefik.http.routers.jhosua-api.rule=Host(`api.jhosuacomercial.com`)'
-        - 'traefik.http.routers.jhosua-api.entrypoints=websecure'
-        - 'traefik.http.routers.jhosua-api.tls=true'
-        - 'traefik.http.routers.jhosua-api.tls.certresolver=letsencryptresolver'
-        - 'traefik.http.services.jhosua-api.loadbalancer.server.port=3000'
+        - "traefik.enable=true"
+        - "traefik.docker.network=RenaceNet"
+        - "traefik.http.routers.jhosua-api-http.rule=Host(`api.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosua-api-http.entrypoints=web"
+        - "traefik.http.routers.jhosua-api-http.middlewares=jhosua-api-redirect"
+        - "traefik.http.middlewares.jhosua-api-redirect.redirectscheme.scheme=https"
+        - "traefik.http.routers.jhosua-api.rule=Host(`api.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosua-api.entrypoints=websecure"
+        - "traefik.http.routers.jhosua-api.tls=true"
+        - "traefik.http.routers.jhosua-api.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.jhosua-api.loadbalancer.server.port=3000"
 
   web:
     image: jhosuacom-web:latest
@@ -83,20 +79,16 @@ services:
     networks:
       - RenaceNet
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'node -e "require(\'http\').get(\'http://127.0.0.1:3000\',r=>process.exit(r.statusCode<500?0:1)).on(\'error\',()=>process.exit(1))"',
-        ]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     deploy:
       replicas: 1
       restart_policy:
@@ -109,21 +101,21 @@ services:
         order: start-first
       resources:
         limits:
-          cpus: '0.50'
-          memory: 768M
+          cpus: "0.50"
+          memory: "768M"
       labels:
-        - 'traefik.enable=true'
-        - 'traefik.docker.network=RenaceNet'
-        - 'traefik.http.routers.jhosua-web-http.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)'
-        - 'traefik.http.routers.jhosua-web-http.entrypoints=web'
-        - 'traefik.http.routers.jhosua-web-http.middlewares=jhosua-web-redirect'
-        - 'traefik.http.middlewares.jhosua-web-redirect.redirectscheme.scheme=https'
-        - 'traefik.http.middlewares.jhosua-web-redirect.redirectscheme.permanent=true'
-        - 'traefik.http.routers.jhosua-web.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)'
-        - 'traefik.http.routers.jhosua-web.entrypoints=websecure'
-        - 'traefik.http.routers.jhosua-web.tls=true'
-        - 'traefik.http.routers.jhosua-web.tls.certresolver=letsencryptresolver'
-        - 'traefik.http.services.jhosua-web.loadbalancer.server.port=3000'
+        - "traefik.enable=true"
+        - "traefik.docker.network=RenaceNet"
+        - "traefik.http.routers.jhosua-web-http.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosua-web-http.entrypoints=web"
+        - "traefik.http.routers.jhosua-web-http.middlewares=jhosua-web-redirect"
+        - "traefik.http.middlewares.jhosua-web-redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.jhosua-web-redirect.redirectscheme.permanent=true"
+        - "traefik.http.routers.jhosua-web.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
+        - "traefik.http.routers.jhosua-web.entrypoints=websecure"
+        - "traefik.http.routers.jhosua-web.tls=true"
+        - "traefik.http.routers.jhosua-web.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.jhosua-web.loadbalancer.server.port=3000"
 
   db:
     image: postgres:16-alpine
@@ -138,18 +130,18 @@ services:
         aliases:
           - jhosua-db
     logging:
-      driver: json-file
+      driver: "json-file"
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
       resources:
         limits:
-          cpus: '0.50'
-          memory: 1G
+          cpus: "0.50"
+          memory: "1G"
 
 networks:
   RenaceNet:

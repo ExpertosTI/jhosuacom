@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Corre desde /app/apps/api; resolver deps desde el monorepo
+cd /app
+
 echo "⏳ Esperando Postgres..."
 node <<'NODE'
 const postgres = require('postgres');
@@ -17,7 +20,7 @@ if (!url) {
       await sql.end({ timeout: 1 });
       console.log('✅ Postgres listo');
       process.exit(0);
-    } catch (e) {
+    } catch {
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
@@ -30,12 +33,12 @@ cd /app/packages/db
 
 if [ "${RUN_DB_PUSH:-true}" = "true" ]; then
   echo "📦 drizzle-kit push..."
-  pnpm exec drizzle-kit push --force || npx drizzle-kit push --force || true
+  pnpm exec drizzle-kit push --force
 fi
 
 if [ "${RUN_DB_SEED:-true}" = "true" ]; then
   echo "🌱 seed..."
-  pnpm exec tsx src/seed.ts || npx tsx src/seed.ts || true
+  pnpm exec tsx src/seed.ts
 fi
 
 cd /app/apps/api
