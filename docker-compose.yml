@@ -50,12 +50,12 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        failure_action: pause
-        order: start-first
+        failure_action: rollback
+        order: stop-first
       resources:
         limits:
           cpus: "0.75"
-          memory: "1536M"
+          memory: "1024M"
       # API solo interna (la web hace proxy /api → jhosuacom_api)
       # Sin labels Traefik públicas: evita 404 de Next cuando PathPrefix falla
 

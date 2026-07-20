@@ -33,15 +33,15 @@ let tries = 0;
 })();
 NODE
 
-# Migrate + seed usando tree del monorepo (best-effort)
-if [ "${RUN_DB_PUSH:-true}" = "true" ] && [ -d /opt/db ]; then
+# Migrate + seed solo si se pide explícitamente (por defecto OFF: evita OOM en Swarm)
+if [ "${RUN_DB_PUSH:-false}" = "true" ] && [ -d /opt/db ]; then
   echo "📦 drizzle push..."
   export NODE_PATH="/opt/db-node_modules:${NODE_PATH:-}"
   (cd /opt/db && NODE_PATH="/opt/db-node_modules" /opt/db-node_modules/.bin/drizzle-kit push --force) \
     || echo "⚠️  push omitido"
 fi
 
-if [ "${RUN_DB_SEED:-true}" = "true" ] && [ -d /opt/db ]; then
+if [ "${RUN_DB_SEED:-false}" = "true" ] && [ -d /opt/db ]; then
   echo "🌱 seed..."
   export NODE_PATH="/opt/db-node_modules:${NODE_PATH:-}"
   (cd /opt/db && NODE_PATH="/opt/db-node_modules" /opt/db-node_modules/.bin/tsx src/seed.ts) \

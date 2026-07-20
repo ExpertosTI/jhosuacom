@@ -39,6 +39,12 @@ echo "-----------------------------------"
 echo "💾 Disco..."
 df -h / | tail -1
 docker system df || true
+# Liberar espacio antes del build (VPS ~48G; builds dejan capas huérfanas)
+echo "🧹 Prune Docker (imágenes/caché no usadas)..."
+docker container prune -f >/dev/null 2>&1 || true
+docker image prune -af >/dev/null 2>&1 || true
+docker builder prune -af >/dev/null 2>&1 || true
+df -h / | tail -1
 
 echo "📥 Sync Git..."
 git fetch --all
@@ -57,8 +63,9 @@ DATABASE_URL=postgres://jhosua:${DB_PASS}@jhosua-db:5432/jhosua
 JWT_SECRET=${JWT}
 ADMIN_EMAIL=admin@jhhogar.com
 ADMIN_PASSWORD=JhHogarAdmin2026!
-NEXT_PUBLIC_API_URL=https://jhosuacomercial.com/api
+NEXT_PUBLIC_API_URL=/api
 PUBLIC_WEB_URL=https://jhosuacomercial.com
+INTERNAL_API_URL=http://jhosuacom_api:3000
 ODOO_MOCK=true
 ODOO_URL=
 ODOO_DB=
@@ -69,11 +76,19 @@ EVOLUTION_API_URL=
 EVOLUTION_API_KEY=
 EVOLUTION_INSTANCE=jhhogar
 ADMIN_NOTIFY_PHONES=
-RUN_DB_PUSH=true
-RUN_DB_SEED=true
+RUN_DB_PUSH=false
+RUN_DB_SEED=false
 EOF
   echo "✅ .env creado"
 fi
+
+# Evitar OOM: .env viejo podía tener RUN_DB_*=true en cada arranque
+grep -q '^RUN_DB_PUSH=' .env \
+  && sed -i 's|^RUN_DB_PUSH=.*|RUN_DB_PUSH=false|' .env \
+  || echo 'RUN_DB_PUSH=false' >> .env
+grep -q '^RUN_DB_SEED=' .env \
+  && sed -i 's|^RUN_DB_SEED=.*|RUN_DB_SEED=false|' .env \
+  || echo 'RUN_DB_SEED=false' >> .env
 
 set -a
 # shellcheck disable=SC1091
