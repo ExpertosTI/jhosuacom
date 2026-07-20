@@ -61,6 +61,7 @@ export async function bootstrapDatabase() {
           description text,
           category text,
           image_url text,
+          image_urls jsonb NOT NULL DEFAULT '[]'::jsonb,
           price_detal numeric(14,2) NOT NULL DEFAULT 0,
           price_mayor numeric(14,2) NOT NULL DEFAULT 0,
           min_mayor_qty integer NOT NULL DEFAULT 6,
@@ -151,6 +152,9 @@ export async function bootstrapDatabase() {
 
     // Migraciones ligeras (DB ya existente)
     await client.unsafe(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS image_url text`).catch(() => {});
+    await client
+      .unsafe(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_urls jsonb NOT NULL DEFAULT '[]'::jsonb`)
+      .catch(() => {});
 
     const db = drizzle(client, { schema });
     const productRows = await client`SELECT id FROM products LIMIT 1`;

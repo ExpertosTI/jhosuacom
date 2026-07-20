@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'JH Hogar — Catálogo Web',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'category': 'Sales/Sales',
     'summary': 'Selecciona qué productos de cada empresa se publican en jhosuacomercial.com',
     'description': """
@@ -14,6 +14,7 @@ se sincronizan con la tienda JH Hogar.
 * Menú: Ventas → JH Hogar Web → Catálogos web
 * Multi-compañía nativo
 * Flag calculado ``jh_show_on_website`` en el producto
+* Galería de fotos múltiples (imagen principal + product.image)
 * La API de la tienda solo importa productos de catálogos publicados
 """,
     'author': 'Renace Technologies',

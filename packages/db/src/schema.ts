@@ -62,6 +62,8 @@ export const products = pgTable(
     description: text('description'),
     category: text('category'),
     imageUrl: text('image_url'),
+    /** Galería: data URLs o URLs públicas (primera = imageUrl) */
+    imageUrls: jsonb('image_urls').$type<string[]>().notNull().default([]),
     priceDetal: numeric('price_detal', { precision: 14, scale: 2 }).notNull().default('0'),
     priceMayor: numeric('price_mayor', { precision: 14, scale: 2 }).notNull().default('0'),
     minMayorQty: integer('min_mayor_qty').notNull().default(6),

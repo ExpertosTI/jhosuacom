@@ -17,6 +17,7 @@ export type Product = {
   description?: string | null;
   category?: string | null;
   imageUrl?: string | null;
+  imageUrls?: string[] | null;
   priceDetal: string;
   priceMayor: string;
   minMayorQty: number;

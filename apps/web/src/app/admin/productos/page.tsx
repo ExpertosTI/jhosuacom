@@ -23,6 +23,7 @@ export default function AdminProductosPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-ink-3 font-raj text-[10px] uppercase tracking-wider text-chrome-muted">
             <tr>
+              <th className="px-4 py-3">Foto</th>
               <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">Nombre</th>
               <th className="px-4 py-3">Empresa</th>
@@ -32,8 +33,35 @@ export default function AdminProductosPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {products.map((p) => {
+              const thumbs = (p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : []).slice(
+                0,
+                3,
+              );
+              return (
               <tr key={p.id} className="border-t border-gold/10">
+                <td className="px-4 py-3">
+                  <div className="flex gap-1">
+                    {thumbs.length ? (
+                      thumbs.map((src, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          className="h-10 w-10 object-cover border border-gold/20"
+                        />
+                      ))
+                    ) : (
+                      <span className="text-chrome-muted">—</span>
+                    )}
+                    {(p.imageUrls?.length || 0) > 3 && (
+                      <span className="self-center text-[10px] text-chrome-muted">
+                        +{(p.imageUrls?.length || 0) - 3}
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-chrome-muted">{p.sku || '—'}</td>
                 <td className="px-4 py-3">{p.name}</td>
                 <td className="px-4 py-3 text-chrome-muted">{p.company?.name}</td>
@@ -41,7 +69,8 @@ export default function AdminProductosPage() {
                 <td className="px-4 py-3">{money(p.priceMayor)}</td>
                 <td className="px-4 py-3">{p.stock}</td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

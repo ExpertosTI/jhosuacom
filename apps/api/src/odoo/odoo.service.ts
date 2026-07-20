@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+import { settings } from '@jhosua/db';
+import { DRIZZLE } from '../database/database.module';
 
 export interface OdooConfig {
   url: string;
@@ -6,6 +9,21 @@ export interface OdooConfig {
   username: string;
   apiKey: string;
 }
+
+export type OdooRuntimeConfig = OdooConfig & {
+  mock: boolean;
+  companyIds: number[];
+};
+
+/** Valores guardados en settings.key = 'odoo' (sin hardcode en código). */
+export type OdooStoredSettings = {
+  url?: string;
+  database?: string;
+  username?: string;
+  apiKey?: string;
+  companyIds?: string | number[];
+  mock?: boolean;
+};
 
 export interface OdooCompany {
   id: number;
@@ -22,31 +40,128 @@ export interface OdooProduct {
   categ_id: [number, string] | false;
   company_id: [number, string] | false;
   image_128?: string | false;
+  product_template_image_ids?: number[];
+  /** Imágenes resueltas (base64 sin data: prefix) — principal + galería */
+  images?: string[];
+}
+
+function parseCompanyIds(raw: string | number[] | undefined): number[] {
+  if (Array.isArray(raw)) {
+    return raw.map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  }
+  if (!raw || typeof raw !== 'string') return [];
+  return raw
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+function toDataUrl(b64: string): string {
+  return `data:image/jpeg;base64,${b64}`;
 }
 
 @Injectable()
 export class OdooService {
   private readonly logger = new Logger(OdooService.name);
 
-  isMock(): boolean {
-    return process.env.ODOO_MOCK === 'true' || !process.env.ODOO_API_KEY;
+  constructor(@Inject(DRIZZLE) private db: any) {}
+
+  async getStored(): Promise<OdooStoredSettings> {
+    const row = await this.db.query.settings.findFirst({
+      where: eq(settings.key, 'odoo'),
+    });
+    return ((row?.value || {}) as OdooStoredSettings) || {};
   }
 
-  getConfig(): OdooConfig {
+  /**
+   * Config efectiva: panel admin (settings) tiene prioridad sobre .env.
+   * No hay URLs/credenciales hardcodeadas en el código.
+   */
+  async resolveConfig(override?: Partial<OdooStoredSettings>): Promise<OdooRuntimeConfig> {
+    const stored = await this.getStored();
+    const merged: OdooStoredSettings = { ...stored, ...override };
+
+    const url = (merged.url || process.env.ODOO_URL || '').trim();
+    const database = (merged.database || process.env.ODOO_DB || '').trim();
+    const username = (merged.username || process.env.ODOO_USERNAME || '').trim();
+    const apiKey = (merged.apiKey || process.env.ODOO_API_KEY || '').trim();
+    const companyIds = parseCompanyIds(
+      merged.companyIds ?? process.env.ODOO_COMPANY_IDS,
+    );
+
+    let mock: boolean;
+    if (typeof merged.mock === 'boolean') {
+      mock = merged.mock;
+    } else if (process.env.ODOO_MOCK === 'true') {
+      mock = true;
+    } else if (process.env.ODOO_MOCK === 'false') {
+      mock = !apiKey;
+    } else {
+      mock = !apiKey;
+    }
+
+    return { url, database, username, apiKey, mock, companyIds };
+  }
+
+  async isMock(): Promise<boolean> {
+    const cfg = await this.resolveConfig();
+    return cfg.mock;
+  }
+
+  async getPublicConfig() {
+    const stored = await this.getStored();
+    const cfg = await this.resolveConfig();
+    const fromDb = Boolean(
+      stored.url || stored.database || stored.username || stored.apiKey,
+    );
     return {
-      url: process.env.ODOO_URL || '',
-      database: process.env.ODOO_DB || '',
-      username: process.env.ODOO_USERNAME || '',
-      apiKey: process.env.ODOO_API_KEY || '',
+      url: cfg.url,
+      database: cfg.database,
+      username: cfg.username,
+      hasApiKey: Boolean(cfg.apiKey),
+      companyIds: cfg.companyIds.join(','),
+      mock: cfg.mock,
+      source: fromDb ? ('database' as const) : ('env' as const),
     };
   }
 
-  companyFilterIds(): number[] {
-    const raw = process.env.ODOO_COMPANY_IDS || '';
-    return raw
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n) && n > 0);
+  async saveConfig(input: {
+    url?: string;
+    database?: string;
+    username?: string;
+    apiKey?: string;
+    companyIds?: string;
+    mock?: boolean;
+  }) {
+    const stored = await this.getStored();
+    const keepKey =
+      !input.apiKey ||
+      input.apiKey === '********' ||
+      input.apiKey === '__KEEP__';
+
+    const next: OdooStoredSettings = {
+      url: (input.url ?? stored.url ?? '').trim(),
+      database: (input.database ?? stored.database ?? '').trim(),
+      username: (input.username ?? stored.username ?? '').trim(),
+      apiKey: keepKey ? stored.apiKey || '' : (input.apiKey || '').trim(),
+      companyIds: (input.companyIds ?? stored.companyIds ?? '').toString().trim(),
+      mock: typeof input.mock === 'boolean' ? input.mock : stored.mock,
+    };
+
+    const existing = await this.db.query.settings.findFirst({
+      where: eq(settings.key, 'odoo'),
+    });
+
+    if (existing) {
+      await this.db
+        .update(settings)
+        .set({ value: next, updatedAt: new Date() })
+        .where(eq(settings.id, existing.id));
+    } else {
+      await this.db.insert(settings).values({ key: 'odoo', value: next });
+    }
+
+    return this.getPublicConfig();
   }
 
   private async jsonRpc(url: string, service: string, method: string, args: unknown[]) {
@@ -78,7 +193,7 @@ export class OdooService {
     return uid as number;
   }
 
-  async testConnection(): Promise<{
+  async testConnection(override?: Partial<OdooStoredSettings>): Promise<{
     ok: boolean;
     uid?: number;
     message: string;
@@ -87,12 +202,22 @@ export class OdooService {
     database?: string;
     username?: string;
   }> {
-    const cfg = this.getConfig();
-    if (this.isMock()) {
+    const cfg = await this.resolveConfig(override);
+    if (cfg.mock) {
       return {
         ok: true,
         mock: true,
-        message: 'Modo mock activo (sin API key Odoo)',
+        message: 'Modo mock activo (sin API key Odoo o mock=true)',
+        url: cfg.url || undefined,
+        database: cfg.database || undefined,
+        username: cfg.username || undefined,
+      };
+    }
+    if (!cfg.url || !cfg.database || !cfg.username || !cfg.apiKey) {
+      return {
+        ok: false,
+        mock: false,
+        message: 'Faltan URL, base de datos, usuario o API key',
         url: cfg.url || undefined,
         database: cfg.database || undefined,
         username: cfg.username || undefined,
@@ -104,7 +229,7 @@ export class OdooService {
         ok: true,
         uid,
         mock: false,
-        message: 'Conectado a Odoo',
+        message: 'Conectado a Odoo 18',
         url: cfg.url,
         database: cfg.database,
         username: cfg.username,
@@ -121,31 +246,32 @@ export class OdooService {
     }
   }
 
-  async fetchCompanies(config = this.getConfig()): Promise<OdooCompany[]> {
-    if (this.isMock()) {
+  async fetchCompanies(config?: OdooRuntimeConfig): Promise<OdooCompany[]> {
+    const cfg = config ?? (await this.resolveConfig());
+    if (cfg.mock) {
       return [
         { id: 1, name: 'JH Hogar' },
         { id: 2, name: 'Electro JH' },
         { id: 3, name: 'Muebles JH' },
       ];
     }
-    const uid = await this.authenticate(config);
-    const filterIds = this.companyFilterIds();
+    const uid = await this.authenticate(cfg);
+    const filterIds = cfg.companyIds;
     const domain = filterIds.length ? [[['id', 'in', filterIds]]] : [[]];
-    const ids = await this.jsonRpc(config.url, 'object', 'execute_kw', [
-      config.database,
+    const ids = await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
+      cfg.database,
       uid,
-      config.apiKey,
+      cfg.apiKey,
       'res.company',
       'search',
       domain,
       { limit: 50 },
     ]);
     if (!ids?.length) return [];
-    const rows = await this.jsonRpc(config.url, 'object', 'execute_kw', [
-      config.database,
+    const rows = await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
+      cfg.database,
       uid,
-      config.apiKey,
+      cfg.apiKey,
       'res.company',
       'read',
       [ids],
@@ -154,31 +280,51 @@ export class OdooService {
     return rows as OdooCompany[];
   }
 
-  async fetchProducts(config = this.getConfig(), companyId?: number): Promise<OdooProduct[]> {
-    if (this.isMock()) return [];
+  async fetchProducts(companyId?: number, config?: OdooRuntimeConfig): Promise<OdooProduct[]> {
+    const cfg = config ?? (await this.resolveConfig());
+    if (cfg.mock) return [];
 
-    const uid = await this.authenticate(config);
+    const uid = await this.authenticate(cfg);
 
-    // Preferencia: productos de catálogos JH publicados (módulo jh_website_catalog)
-    const catalogProductIds = await this.fetchCatalogProductIds(config, uid, companyId);
+    const catalogProductIds = await this.fetchCatalogProductIds(cfg, uid, companyId);
     const domain: any[] = [['sale_ok', '=', true]];
     if (catalogProductIds !== null) {
       if (!catalogProductIds.length) return [];
       domain.push(['id', 'in', catalogProductIds]);
-    } else if (await this.hasField(config, uid, 'product.template', 'jh_show_on_website')) {
+    } else if (await this.hasField(cfg, uid, 'product.template', 'jh_show_on_website')) {
       domain.push(['jh_show_on_website', '=', true]);
     }
     if (companyId) domain.push(['company_id', 'in', [false, companyId]]);
+
+    const hasExtraImages = await this.hasField(
+      cfg,
+      uid,
+      'product.template',
+      'product_template_image_ids',
+    );
+
+    const fields = [
+      'id',
+      'name',
+      'list_price',
+      'default_code',
+      'description_sale',
+      'qty_available',
+      'categ_id',
+      'company_id',
+      'image_128',
+      ...(hasExtraImages ? ['product_template_image_ids'] : []),
+    ];
 
     const all: OdooProduct[] = [];
     const pageSize = 200;
     let offset = 0;
 
     while (true) {
-      const productIds = await this.jsonRpc(config.url, 'object', 'execute_kw', [
-        config.database,
+      const productIds = await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
+        cfg.database,
         uid,
-        config.apiKey,
+        cfg.apiKey,
         'product.template',
         'search',
         [domain],
@@ -186,33 +332,72 @@ export class OdooService {
       ]);
       if (!productIds?.length) break;
 
-      const products = await this.jsonRpc(config.url, 'object', 'execute_kw', [
-        config.database,
+      const products = (await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
+        cfg.database,
         uid,
-        config.apiKey,
+        cfg.apiKey,
         'product.template',
         'read',
         [productIds],
-        {
-          fields: [
-            'id',
-            'name',
-            'list_price',
-            'default_code',
-            'description_sale',
-            'qty_available',
-            'categ_id',
-            'company_id',
-            'image_128',
-          ],
-        },
-      ]);
-      all.push(...(products as OdooProduct[]));
+        { fields },
+      ])) as OdooProduct[];
+
+      await this.attachExtraImages(cfg, uid, products, hasExtraImages);
+      all.push(...products);
       if (productIds.length < pageSize) break;
       offset += pageSize;
     }
 
     return all;
+  }
+
+  private async attachExtraImages(
+    config: OdooConfig,
+    uid: number,
+    products: OdooProduct[],
+    hasExtraImages: boolean,
+  ) {
+    const imageMap = new Map<number, string>();
+
+    if (hasExtraImages) {
+      const allImageIds = [
+        ...new Set(products.flatMap((p) => p.product_template_image_ids || [])),
+      ];
+      if (allImageIds.length) {
+        try {
+          const rows = (await this.jsonRpc(config.url, 'object', 'execute_kw', [
+            config.database,
+            uid,
+            config.apiKey,
+            'product.image',
+            'read',
+            [allImageIds],
+            { fields: ['id', 'image_128', 'sequence'] },
+          ])) as Array<{ id: number; image_128?: string | false; sequence?: number }>;
+
+          rows.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+          for (const row of rows) {
+            if (typeof row.image_128 === 'string' && row.image_128.length > 20) {
+              imageMap.set(row.id, row.image_128);
+            }
+          }
+        } catch (e: any) {
+          this.logger.warn(`No se pudieron leer product.image: ${e.message}`);
+        }
+      }
+    }
+
+    for (const p of products) {
+      const images: string[] = [];
+      if (typeof p.image_128 === 'string' && p.image_128.length > 20) {
+        images.push(p.image_128);
+      }
+      for (const iid of p.product_template_image_ids || []) {
+        const b64 = imageMap.get(iid);
+        if (b64 && !images.includes(b64)) images.push(b64);
+      }
+      p.images = images;
+    }
   }
 
   /** IDs de product.template en catálogos publicados. null = módulo no instalado. */
@@ -293,12 +478,12 @@ export class OdooService {
     notes?: string;
     lines: Array<{ productTemplateId: number; qty: number; price: number }>;
   }): Promise<{ id: number; name: string } | null> {
-    if (this.isMock()) {
+    const config = await this.resolveConfig();
+    if (config.mock) {
       const fakeId = Math.floor(Math.random() * 9000) + 1000;
       return { id: fakeId, name: `S${fakeId}` };
     }
 
-    const config = this.getConfig();
     const uid = await this.authenticate(config);
 
     let partnerId = input.partnerId;
@@ -348,7 +533,6 @@ export class OdooService {
     ]);
 
     for (const line of input.lines) {
-      // product.template → product.product (variante)
       const variantIds = await this.jsonRpc(config.url, 'object', 'execute_kw', [
         config.database,
         uid,
@@ -394,8 +578,8 @@ export class OdooService {
   }
 
   async fetchPartnerDebt(partnerId: number): Promise<number> {
-    if (this.isMock()) return 0;
-    const config = this.getConfig();
+    const config = await this.resolveConfig();
+    if (config.mock) return 0;
     const uid = await this.authenticate(config);
     const [partner] = await this.jsonRpc(config.url, 'object', 'execute_kw', [
       config.database,
@@ -410,8 +594,8 @@ export class OdooService {
   }
 
   async fetchSaleOrderStatus(orderId: number): Promise<{ state: string; name: string } | null> {
-    if (this.isMock()) return { state: 'draft', name: `S${orderId}` };
-    const config = this.getConfig();
+    const config = await this.resolveConfig();
+    if (config.mock) return { state: 'draft', name: `S${orderId}` };
     const uid = await this.authenticate(config);
     const rows = await this.jsonRpc(config.url, 'object', 'execute_kw', [
       config.database,
@@ -423,5 +607,11 @@ export class OdooService {
       { fields: ['id', 'name', 'state'] },
     ]);
     return rows?.[0] || null;
+  }
+
+  /** Helper para sync: convierte lista base64 → data URLs */
+  static imagesToUrls(images: string[] | undefined): { imageUrl: string | null; imageUrls: string[] } {
+    const urls = (images || []).filter((b) => b && b.length > 20).map(toDataUrl);
+    return { imageUrl: urls[0] || null, imageUrls: urls };
   }
 }

@@ -26,11 +26,11 @@ export class OdooSyncService {
   async syncAll() {
     const started = Date.now();
     try {
-      if (this.odoo.isMock()) {
+      if (await this.odoo.isMock()) {
         await this.db.insert(syncLogs).values({
           kind: 'products',
           status: 'skipped',
-          message: 'ODOO_MOCK activo — usando catálogo local/seed',
+          message: 'Modo mock activo — usando catálogo local/seed',
         });
         return {
           mock: true,
@@ -40,7 +40,8 @@ export class OdooSyncService {
         };
       }
 
-      const odooCompanies = await this.odoo.fetchCompanies();
+      const cfg = await this.odoo.resolveConfig();
+      const odooCompanies = await this.odoo.fetchCompanies(cfg);
       let companyCount = 0;
       let productCount = 0;
 
@@ -71,19 +72,17 @@ export class OdooSyncService {
         }
         companyCount++;
 
-        const rows = await this.odoo.fetchProducts(undefined, oc.id);
+        const rows = await this.odoo.fetchProducts(oc.id, cfg);
         for (const p of rows) {
           const price = String(p.list_price ?? 0);
-          const imageUrl =
-            typeof p.image_128 === 'string' && p.image_128.length > 20
-              ? `data:image/jpeg;base64,${p.image_128}`
-              : null;
+          const { imageUrl, imageUrls } = OdooService.imagesToUrls(p.images);
           const payload = {
             sku: p.default_code || null,
             name: p.name,
             description: p.description_sale || null,
             category: p.categ_id ? p.categ_id[1] : null,
             imageUrl,
+            imageUrls,
             priceDetal: price,
             priceMayor: price,
             stock: String(p.qty_available ?? 0),
@@ -118,6 +117,7 @@ export class OdooSyncService {
           companies: companyCount,
           products: productCount,
           source: 'jh.website.catalog | jh_show_on_website | sale_ok',
+          images: true,
         },
       });
 
@@ -125,7 +125,7 @@ export class OdooSyncService {
         mock: false,
         companies: companyCount,
         products: productCount,
-        message: `Sync OK: ${productCount} productos de catálogos JH / Odoo`,
+        message: `Sync OK: ${productCount} productos (con galería de imágenes)`,
       };
     } catch (e: any) {
       this.logger.error(e);
