@@ -8,6 +8,7 @@ import { CustomersModule } from './customers/customers.module';
 import { PublicModule } from './public/public.module';
 import { WhatsAppModule } from './whatsapp/whatsapp.module';
 import { AdminModule } from './admin/admin.module';
+import { AiModule } from './ai/ai.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthController } from './health.controller';
     PublicModule,
     WhatsAppModule,
     AdminModule,
+    AiModule,
   ],
   controllers: [HealthController],
 })

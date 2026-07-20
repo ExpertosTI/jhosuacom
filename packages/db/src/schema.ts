@@ -60,6 +60,11 @@ export const products = pgTable(
     sku: text('sku'),
     name: text('name').notNull(),
     description: text('description'),
+    /** Descripción generada por IA (no pisa description humana) */
+    aiDescription: text('ai_description'),
+    aiTags: jsonb('ai_tags').$type<string[]>().notNull().default([]),
+    /** human | odoo | ai */
+    descriptionSource: text('description_source').notNull().default('odoo'),
     category: text('category'),
     imageUrl: text('image_url'),
     /** Galería: data URLs o URLs públicas (primera = imageUrl) */
@@ -164,6 +169,59 @@ export const syncLogs = pgTable('sync_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+/** Auditoría de corridas Gemini */
+export const aiRuns = pgTable(
+  'ai_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    role: text('role').notNull(),
+    channel: text('channel').notNull(),
+    actor: text('actor'),
+    promptSummary: text('prompt_summary'),
+    replySummary: text('reply_summary'),
+    toolsUsed: jsonb('tools_used').$type<string[]>().notNull().default([]),
+    ok: boolean('ok').notNull().default(true),
+    error: text('error'),
+    meta: jsonb('meta'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('ai_runs_created_idx').on(t.createdAt), index('ai_runs_channel_idx').on(t.channel)],
+);
+
+export const waConversations = pgTable(
+  'wa_conversations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    phone: text('phone').notNull(),
+    customerName: text('customer_name'),
+    status: text('status').notNull().default('ai'), // ai | human | closed
+    lastOrderId: uuid('last_order_id').references(() => orders.id),
+    meta: jsonb('meta'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('wa_conversations_phone_uidx').on(t.phone),
+    index('wa_conversations_status_idx').on(t.status),
+  ],
+);
+
+export const waMessages = pgTable(
+  'wa_messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => waConversations.id, { onDelete: 'cascade' }),
+    role: text('role').notNull(), // user | assistant | system
+    text: text('text').notNull(),
+    orderId: uuid('order_id').references(() => orders.id),
+    meta: jsonb('meta'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('wa_messages_conversation_idx').on(t.conversationId)],
+);
+
 export const companiesRelations = relations(companies, ({ many }) => ({
   products: many(products),
 }));
@@ -200,4 +258,19 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 
 export const customersRelations = relations(customers, ({ many }) => ({
   orders: many(orders),
+}));
+
+export const waConversationsRelations = relations(waConversations, ({ many, one }) => ({
+  messages: many(waMessages),
+  lastOrder: one(orders, {
+    fields: [waConversations.lastOrderId],
+    references: [orders.id],
+  }),
+}));
+
+export const waMessagesRelations = relations(waMessages, ({ one }) => ({
+  conversation: one(waConversations, {
+    fields: [waMessages.conversationId],
+    references: [waConversations.id],
+  }),
 }));

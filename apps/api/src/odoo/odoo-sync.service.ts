@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { eq } from 'drizzle-orm';
 import { companies, products, syncLogs } from '@jhosua/db';
 import { DRIZZLE } from '../database/database.module';
@@ -21,6 +22,7 @@ export class OdooSyncService {
   constructor(
     @Inject(DRIZZLE) private db: any,
     private odoo: OdooService,
+    private moduleRef: ModuleRef,
   ) {}
 
   async syncAll() {
@@ -109,6 +111,17 @@ export class OdooSyncService {
         }
       }
 
+      let enrichMeta: Record<string, unknown> | null = null;
+      try {
+        const { AiEnrichmentService } = await import('../ai/ai-enrichment.service');
+        const enrich = this.moduleRef.get(AiEnrichmentService, { strict: false });
+        if (enrich) {
+          enrichMeta = (await enrich.enrichProducts(25)) as Record<string, unknown>;
+        }
+      } catch (e: any) {
+        this.logger.warn(`AI enrich post-sync: ${e.message}`);
+      }
+
       await this.db.insert(syncLogs).values({
         kind: 'products',
         status: 'ok',
@@ -118,6 +131,7 @@ export class OdooSyncService {
           products: productCount,
           source: 'jh.website.catalog | jh_show_on_website | sale_ok',
           images: true,
+          enrich: enrichMeta,
         },
       });
 
@@ -125,6 +139,7 @@ export class OdooSyncService {
         mock: false,
         companies: companyCount,
         products: productCount,
+        enrich: enrichMeta,
         message: `Sync OK: ${productCount} productos (con galería de imágenes)`,
       };
     } catch (e: any) {

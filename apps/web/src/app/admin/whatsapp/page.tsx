@@ -219,6 +219,11 @@ export default function AdminWhatsAppPage() {
             </p>
           )}
 
+          <p className="mt-4 text-[11px] text-chrome-muted">
+            IA vendedor: activa en /admin/ia · webhook Evolution →{' '}
+            <code className="text-gold-light/80">/api/webhooks/evolution</code>
+          </p>
+
           <div className="mt-8 border-t border-gold/10 pt-6">
             <p className="font-raj text-xs uppercase tracking-widest text-chrome-muted">
               Mensaje de prueba

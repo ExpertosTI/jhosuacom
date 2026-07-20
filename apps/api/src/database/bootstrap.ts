@@ -59,6 +59,9 @@ export async function bootstrapDatabase() {
           sku text,
           name text NOT NULL,
           description text,
+          ai_description text,
+          ai_tags jsonb NOT NULL DEFAULT '[]'::jsonb,
+          description_source text NOT NULL DEFAULT 'odoo',
           category text,
           image_url text,
           image_urls jsonb NOT NULL DEFAULT '[]'::jsonb,
@@ -155,6 +158,59 @@ export async function bootstrapDatabase() {
     await client
       .unsafe(`ALTER TABLE products ADD COLUMN IF NOT EXISTS image_urls jsonb NOT NULL DEFAULT '[]'::jsonb`)
       .catch(() => {});
+    await client.unsafe(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_description text`).catch(() => {});
+    await client
+      .unsafe(`ALTER TABLE products ADD COLUMN IF NOT EXISTS ai_tags jsonb NOT NULL DEFAULT '[]'::jsonb`)
+      .catch(() => {});
+    await client
+      .unsafe(
+        `ALTER TABLE products ADD COLUMN IF NOT EXISTS description_source text NOT NULL DEFAULT 'odoo'`,
+      )
+      .catch(() => {});
+
+    await client
+      .unsafe(`
+        CREATE TABLE IF NOT EXISTS ai_runs (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          role text NOT NULL,
+          channel text NOT NULL,
+          actor text,
+          prompt_summary text,
+          reply_summary text,
+          tools_used jsonb NOT NULL DEFAULT '[]'::jsonb,
+          ok boolean NOT NULL DEFAULT true,
+          error text,
+          meta jsonb,
+          created_at timestamp NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS ai_runs_created_idx ON ai_runs(created_at);
+        CREATE INDEX IF NOT EXISTS ai_runs_channel_idx ON ai_runs(channel);
+
+        CREATE TABLE IF NOT EXISTS wa_conversations (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          phone text NOT NULL UNIQUE,
+          customer_name text,
+          status text NOT NULL DEFAULT 'ai',
+          last_order_id uuid REFERENCES orders(id),
+          meta jsonb,
+          created_at timestamp NOT NULL DEFAULT now(),
+          updated_at timestamp NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS wa_conversations_status_idx ON wa_conversations(status);
+
+        CREATE TABLE IF NOT EXISTS wa_messages (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          conversation_id uuid NOT NULL REFERENCES wa_conversations(id) ON DELETE CASCADE,
+          role text NOT NULL,
+          text text NOT NULL,
+          order_id uuid REFERENCES orders(id),
+          meta jsonb,
+          created_at timestamp NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS wa_messages_conversation_idx ON wa_messages(conversation_id);
+      `)
+      .catch((e) => console.warn('AI/WA tables migrate:', e?.message || e));
+
 
     const db = drizzle(client, { schema });
     const productRows = await client`SELECT id FROM products LIMIT 1`;

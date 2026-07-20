@@ -7,6 +7,7 @@ import { MessageCircle, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/lib/cart';
 import { API_URL } from '@/lib/api';
 import { useEffect, useState } from 'react';
+import { StoreChatWidget } from '@/components/StoreChatWidget';
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -94,6 +95,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           </a>
         </p>
       </footer>
+
+      <StoreChatWidget />
     </div>
   );
 }

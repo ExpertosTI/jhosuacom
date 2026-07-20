@@ -4,12 +4,19 @@ import { companies, products, settings } from '@jhosua/db';
 import { DRIZZLE } from '../database/database.module';
 import { Public } from '../auth/auth.guard';
 import { OrdersService } from '../orders/orders.service';
+import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import { AiEnrichmentService } from '../ai/ai-enrichment.service';
+import { AiSettingsService } from '../ai/ai-settings.service';
+import type { ChatTurn } from '../ai/gemini.client';
 
 @Controller('public')
 export class PublicController {
   constructor(
     @Inject(DRIZZLE) private db: any,
     private orders: OrdersService,
+    private ai: AiOrchestratorService,
+    private enrich: AiEnrichmentService,
+    private aiSettings: AiSettingsService,
   ) {}
 
   @Public()
@@ -42,19 +49,62 @@ export class PublicController {
         where: eq(settings.key, 'shop'),
       });
 
+      const productsOut = items.map((p: any) => ({
+        ...p,
+        description: p.description || p.aiDescription || null,
+      }));
+
       return {
         brand: shop?.value || {
           brandName: 'JH Hogar',
           tagline: 'Artículos y electrodomésticos para el hogar',
         },
         companies: cos,
-        products: items,
+        products: productsOut,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error('[catalog]', message);
       throw err;
     }
+  }
+
+  @Public()
+  @Get('recommend')
+  recommend(@Query('productId') productId?: string, @Query('limit') limit?: string) {
+    if (!productId) return { product: null, recommendations: [] };
+    return this.enrich.recommend(productId, Number(limit) || 6);
+  }
+
+  @Public()
+  @Get('ai/status')
+  async aiStatus() {
+    const s = await this.aiSettings.getPublic();
+    return {
+      enabled: s.enabled && s.webEnabled && s.hasApiKey,
+      webEnabled: s.webEnabled,
+    };
+  }
+
+  @Public()
+  @Post('ai/chat')
+  async aiChat(
+    @Body()
+    body: {
+      message?: string;
+      history?: ChatTurn[];
+      sessionId?: string;
+    },
+  ) {
+    const message = String(body?.message || '').trim();
+    if (!message) return { ok: false, reply: '', error: 'message_required' };
+    return this.ai.chat({
+      role: 'sales',
+      channel: 'web',
+      message,
+      history: body.history || [],
+      actor: body.sessionId || 'web',
+    });
   }
 
   @Public()
