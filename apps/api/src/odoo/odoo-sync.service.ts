@@ -109,10 +109,19 @@ export class OdooSyncService {
         kind: 'products',
         status: 'ok',
         message: `Sync OK en ${Date.now() - started}ms`,
-        meta: { companies: companyCount, products: productCount },
+        meta: {
+          companies: companyCount,
+          products: productCount,
+          source: 'jh.website.catalog | jh_show_on_website | sale_ok',
+        },
       });
 
-      return { mock: false, companies: companyCount, products: productCount };
+      return {
+        mock: false,
+        companies: companyCount,
+        products: productCount,
+        message: `Sync OK: ${productCount} productos de catálogos JH / Odoo`,
+      };
     } catch (e: any) {
       this.logger.error(e);
       await this.db.insert(syncLogs).values({

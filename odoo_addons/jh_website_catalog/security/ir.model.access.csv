@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_jh_website_catalog_user,jh.website.catalog user,model_jh_website_catalog,jh_website_catalog.group_jh_website_user,1,0,0,0
+access_jh_website_catalog_manager,jh.website.catalog manager,model_jh_website_catalog,jh_website_catalog.group_jh_website_manager,1,1,1,1
+access_jh_website_catalog_sale_manager,jh.website.catalog sale manager,model_jh_website_catalog,sales_team.group_sale_manager,1,1,1,1

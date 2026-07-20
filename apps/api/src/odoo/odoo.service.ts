@@ -127,7 +127,16 @@ export class OdooService {
     if (this.isMock()) return [];
 
     const uid = await this.authenticate(config);
+
+    // Preferencia: productos de catálogos JH publicados (módulo jh_website_catalog)
+    const catalogProductIds = await this.fetchCatalogProductIds(config, uid, companyId);
     const domain: any[] = [['sale_ok', '=', true]];
+    if (catalogProductIds !== null) {
+      if (!catalogProductIds.length) return [];
+      domain.push(['id', 'in', catalogProductIds]);
+    } else if (await this.hasField(config, uid, 'product.template', 'jh_show_on_website')) {
+      domain.push(['jh_show_on_website', '=', true]);
+    }
     if (companyId) domain.push(['company_id', 'in', [false, companyId]]);
 
     const all: OdooProduct[] = [];
@@ -172,6 +181,75 @@ export class OdooService {
     }
 
     return all;
+  }
+
+  /** IDs de product.template en catálogos publicados. null = módulo no instalado. */
+  private async fetchCatalogProductIds(
+    config: OdooConfig,
+    uid: number,
+    companyId?: number,
+  ): Promise<number[] | null> {
+    try {
+      const domain: any[] = [
+        ['published', '=', true],
+        ['active', '=', true],
+      ];
+      if (companyId) domain.push(['company_id', '=', companyId]);
+
+      const catalogIds = await this.jsonRpc(config.url, 'object', 'execute_kw', [
+        config.database,
+        uid,
+        config.apiKey,
+        'jh.website.catalog',
+        'search',
+        [domain],
+        { limit: 200 },
+      ]);
+      if (!catalogIds?.length) return [];
+
+      const catalogs = await this.jsonRpc(config.url, 'object', 'execute_kw', [
+        config.database,
+        uid,
+        config.apiKey,
+        'jh.website.catalog',
+        'read',
+        [catalogIds],
+        { fields: ['id', 'product_ids'] },
+      ]);
+
+      const set = new Set<number>();
+      for (const c of catalogs as Array<{ product_ids: number[] }>) {
+        for (const pid of c.product_ids || []) set.add(pid);
+      }
+      return Array.from(set);
+    } catch (e: any) {
+      this.logger.warn(
+        `jh.website.catalog no disponible (${e.message}) — fallback sale_ok / jh_show_on_website`,
+      );
+      return null;
+    }
+  }
+
+  private async hasField(
+    config: OdooConfig,
+    uid: number,
+    model: string,
+    field: string,
+  ): Promise<boolean> {
+    try {
+      const fields = await this.jsonRpc(config.url, 'object', 'execute_kw', [
+        config.database,
+        uid,
+        config.apiKey,
+        model,
+        'fields_get',
+        [[field]],
+        { attributes: ['string'] },
+      ]);
+      return Boolean(fields && fields[field]);
+    } catch {
+      return false;
+    }
   }
 
   /** Crea cotización (sale.order en draft) y retorna id + name */

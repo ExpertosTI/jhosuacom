@@ -6,6 +6,8 @@ services:
       dockerfile: apps/api/Dockerfile
     environment:
       - DATABASE_URL=postgres://${DB_USER:-jhosua}:${DB_PASSWORD}@jhosua-db:5432/${DB_NAME:-jhosua}
+      - DB_HOST=jhosua-db
+      - DB_PORT=5432
       - DB_USER=${DB_USER:-jhosua}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-jhosua}

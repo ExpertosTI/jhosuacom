@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_template_form_jh_catalog" model="ir.ui.view">
+        <field name="name">product.template.form.jh.catalog</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="JH Hogar Web" name="jh_website"
+                      groups="jh_website_catalog.group_jh_website_user">
+                    <group>
+                        <group>
+                            <field name="jh_show_on_website"/>
+                        </group>
+                        <group>
+                            <field name="jh_catalog_ids" widget="many2many_tags"
+                                   options="{'no_create_edit': True}"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        Los productos aparecen en la tienda solo si están en un
+                        catálogo publicado (Ventas → JH Hogar Web → Catálogos web).
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_list_jh_catalog" model="ir.ui.view">
+        <field name="name">product.template.list.jh.catalog</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list | //tree" position="inside">
+                <field name="jh_show_on_website" optional="hide"
+                       groups="jh_website_catalog.group_jh_website_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_template_search_jh_catalog" model="ir.ui.view">
+        <field name="name">product.template.search.jh.catalog</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_search_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter string="En web JH Hogar" name="jh_on_website"
+                        domain="[('jh_show_on_website', '=', True)]"
+                        groups="jh_website_catalog.group_jh_website_user"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

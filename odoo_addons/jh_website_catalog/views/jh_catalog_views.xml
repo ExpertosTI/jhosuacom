@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_jh_website_catalog_list" model="ir.ui.view">
+        <field name="name">jh.website.catalog.list</field>
+        <field name="model">jh.website.catalog</field>
+        <field name="arch" type="xml">
+            <list string="Catálogos web JH">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="product_count"/>
+                <field name="published"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_jh_website_catalog_form" model="ir.ui.view">
+        <field name="name">jh.website.catalog.form</field>
+        <field name="model">jh.website.catalog</field>
+        <field name="arch" type="xml">
+            <form string="Catálogo web JH">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_products" type="object"
+                                class="oe_stat_button" icon="fa-cubes">
+                            <field name="product_count" widget="statinfo" string="Productos"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" placeholder="Ej. JH Hogar — Electrodomésticos"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   options="{'no_create': True}"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="published"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Productos en la tienda" name="products">
+                            <field name="product_ids" widget="many2many"
+                                   options="{'no_create': True}"
+                                   context="{'default_company_id': company_id}">
+                                <list>
+                                    <field name="default_code" optional="show"/>
+                                    <field name="name"/>
+                                    <field name="list_price"/>
+                                    <field name="qty_available" optional="show"/>
+                                    <field name="categ_id" optional="hide"/>
+                                    <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notas" name="notes">
+                            <field name="notes" placeholder="Notas internas del catálogo..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_jh_website_catalog_search" model="ir.ui.view">
+        <field name="name">jh.website.catalog.search</field>
+        <field name="model">jh.website.catalog</field>
+        <field name="arch" type="xml">
+            <search string="Buscar catálogos JH">
+                <field name="name"/>
+                <field name="company_id"/>
+                <filter string="Publicados" name="published" domain="[('published', '=', True)]"/>
+                <filter string="Archivados" name="inactive" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter string="Empresa" name="group_company" context="{'group_by': 'company_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_jh_website_catalog" model="ir.actions.act_window">
+        <field name="name">Catálogos web</field>
+        <field name="res_model">jh.website.catalog</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_published': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea tu primer catálogo web
+            </p>
+            <p>
+                Elige la empresa y agrega solo los productos que deben verse en
+                jhosuacomercial.com. Luego sincroniza desde el panel admin de JH Hogar.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_jh_website_root"
+              name="JH Hogar Web"
+              parent="sale.sale_menu_root"
+              sequence="90"
+              groups="jh_website_catalog.group_jh_website_user"/>
+
+    <menuitem id="menu_jh_website_catalog"
+              name="Catálogos web"
+              parent="menu_jh_website_root"
+              action="action_jh_website_catalog"
+              sequence="10"
+              groups="jh_website_catalog.group_jh_website_user"/>
+</odoo>
