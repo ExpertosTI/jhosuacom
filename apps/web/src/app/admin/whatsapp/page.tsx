@@ -185,8 +185,8 @@ export default function AdminWhatsAppPage() {
           </div>
           {status?.configured && status.authOk === false && (
             <p className="mt-3 border border-gold/30 bg-gold/5 p-3 text-xs text-gold-light">
-              Evolution rechaza la API key. En el Mac corre{' '}
-              <code className="text-chrome">./scripts/push-evo.sh</code> y refresca.
+              Evolution rechaza la API key del servidor. Tras el próximo deploy en el VPS
+              (inyecta la clave global de evoapi), refresca y genera el QR.
             </p>
           )}
           {status?.configured && status.authOk !== false && !open && (
@@ -239,7 +239,7 @@ export default function AdminWhatsAppPage() {
                 ? 'Conectado — no hace falta QR.'
                 : status?.configured
                   ? 'Pulsa “Generar QR” y ábrelo en WhatsApp.'
-                  : 'Evolution aún no está en este servidor. En el Mac: ./scripts/push-evo.sh'}
+                  : 'Evolution aún no está configurado en el servidor (falta EVOLUTION_API_KEY en el stack).'}
             </p>
           )}
 

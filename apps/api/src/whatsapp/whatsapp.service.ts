@@ -36,8 +36,8 @@ export class WhatsAppService {
     if (status === 401 || e.includes('unauthorized') || e.includes('forbidden')) {
       return (
         'Evolution rechazó la API key (Unauthorized). ' +
-        'En el VPS debe estar la clave GLOBAL de evoapi (AUTHENTICATION_API_KEY), ' +
-        'no un token de instancia. Corre: ./scripts/push-evo.sh y vuelve a Generar QR.'
+        'El deploy del VPS debe inyectar la clave GLOBAL de evoapi (AUTHENTICATION_API_KEY). ' +
+        'Revisa EVOLUTION_API_KEY en el stack y vuelve a Generar QR.'
       );
     }
     if (status === 404 || e.includes('not found')) {
@@ -137,7 +137,7 @@ export class WhatsAppService {
         phone: null as string | null,
         apiUrl: this.baseUrl() || null,
         authOk: false,
-        error: 'EVOLUTION_API_KEY vacía en el servidor. Corre ./scripts/push-evo.sh',
+        error: 'EVOLUTION_API_KEY vacía en el servidor. El deploy debe inyectarla desde .evolution.local',
       };
     }
 

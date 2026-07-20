@@ -152,7 +152,7 @@ if [ -n "$EVO_SRC" ]; then
     esac
   done < "$EVO_SRC"
 else
-  echo "ℹ️  Sin .evolution.local — corre en Mac: ./scripts/push-evo.sh"
+  echo "ℹ️  Sin .evolution.local — WhatsApp quedará sin clave hasta que exista en /opt/*/.evolution.local"
 fi
 
 force_env EVOLUTION_INSTANCE "jhhogar"
@@ -161,7 +161,7 @@ upsert_env EVOLUTION_API_URL "https://evoapi.renace.tech"
 if grep -q '^EVOLUTION_API_KEY=.\+' .env; then
   echo "✅ Evolution API key lista (instancia jhhogar)"
 else
-  echo "⚠️  EVOLUTION_API_KEY vacía — WhatsApp QR no funcionará hasta push-evo"
+  echo "⚠️  EVOLUTION_API_KEY vacía — WhatsApp QR no funcionará hasta inyectar la clave en el VPS"
 fi
 
 set -a
