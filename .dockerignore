@@ -1,0 +1,17 @@
+# Build context — evitar copiar basura al daemon (disco VPS)
+.git
+.github
+.turbo
+.pnpm-store
+**/.next
+**/dist
+**/node_modules
+maintenance
+*.pdf
+*.md
+.env
+.env.*
+!.env.example
+Logo branding identidad.pdf
+image.png
+prepush

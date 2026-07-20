@@ -1,7 +1,11 @@
 #!/bin/bash
 # ==============================================================================
-# JH Hogar / JhosuaComercial — Deploy Swarm (mismo protocolo que Catagce/Renace)
+# JH Hogar / JhosuaComercial — Deploy Swarm (Renace VPS)
 # VPS: /opt/jhosuacom
+#
+# IMPORTANTE: NO usar `docker compose config` para stack deploy.
+# Compose convierte cpus: "0.50" → 0.5 (float) y Swarm falla con:
+#   services.*.deploy.resources.limits.cpus must be a string
 # ==============================================================================
 set -euo pipefail
 
@@ -16,7 +20,6 @@ for dir in /opt/jhosuacom /opt/jhosuacomercial; do
   fi
 done
 
-# Permite correr desde el propio repo si no está en /opt
 if [ -z "$PROJECT_DIR" ] && [ -f "./docker-compose.yml" ]; then
   PROJECT_DIR="$(pwd)"
 fi
@@ -32,6 +35,10 @@ echo "-----------------------------------"
 echo "🛰️  JH Hogar deploy"
 echo "    dir=$PROJECT_DIR stack=$STACK branch=$BRANCH"
 echo "-----------------------------------"
+
+echo "💾 Disco..."
+df -h / | tail -1
+docker system df || true
 
 echo "📥 Sync Git..."
 git fetch --all
@@ -68,7 +75,6 @@ EOF
   echo "✅ .env creado"
 fi
 
-# Cargar .env (igual que Catagce deploy.sh)
 set -a
 # shellcheck disable=SC1091
 . ./.env
@@ -81,21 +87,15 @@ else
   echo "ℹ️  RenaceNet ok"
 fi
 
-# Si queda el stack de maintenance con el mismo nombre, se reemplaza al deploy
-if docker stack ls 2>/dev/null | awk '{print $1}' | grep -qx "$STACK"; then
-  echo "ℹ️  Stack $STACK ya existe → se actualizará"
-fi
-
 echo "🏗️  Build images..."
 docker compose build --parallel
 
-echo "🚢 Stack deploy..."
-# Mismo patrón Catagce: interpolar con compose config, luego swarm
-docker stack deploy -c <(docker compose config) "$STACK"
+echo "🚢 Stack deploy (yaml directo, sin compose config)..."
+docker stack deploy -c docker-compose.yml "$STACK"
 
-echo "🔄 Force update servicios app..."
-docker service update --force "${STACK}_api"
-docker service update --force "${STACK}_web"
+echo "🔄 Force update..."
+docker service update --force "${STACK}_api" || true
+docker service update --force "${STACK}_web" || true
 
 echo "-----------------------------------"
 echo "✅ Deploy OK"
