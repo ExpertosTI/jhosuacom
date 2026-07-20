@@ -134,17 +134,26 @@ docker service update --label-rm traefik.enable \
   "${STACK}_api" 2>/dev/null || true
 
 echo "🔄 Force update (nueva imagen)..."
-docker service update --force --image jhosuacom-api:latest "${STACK}_api" || true
+docker service update --force --no-healthcheck --image jhosuacom-api:latest "${STACK}_api" || true
 docker service update --force --image jhosuacom-web:latest "${STACK}_web" || true
 
-echo "⏳ Esperando API 1/1 (hasta 120s)..."
-for i in $(seq 1 24); do
+echo "⏳ Esperando API 1/1 (hasta 90s)..."
+for i in $(seq 1 18); do
   if docker service ls --format '{{.Name}} {{.Replicas}}' | grep -qE 'jhosuacom_api[[:space:]]+1/1'; then
     echo "✅ API 1/1"
     break
   fi
   sleep 5
 done
+
+# Smoke test vía contenedor web (RenaceNet no es attachable desde docker run)
+echo "🩺 Health vía web → api..."
+WEB_CID="$(docker ps -q -f name=jhosuacom_web | head -1 || true)"
+if [ -n "$WEB_CID" ]; then
+  docker exec "$WEB_CID" wget -qO- http://jhosuacom_api:3000/api/health 2>/dev/null \
+    || docker exec "$WEB_CID" node -e "require('http').get('http://jhosuacom_api:3000/api/health',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{console.log(d);process.exit(r.statusCode===200?0:1)})}).on('error',e=>{console.error(e);process.exit(1)})" \
+    || echo "⚠️  health interno no respondió aún"
+fi
 
 echo "-----------------------------------"
 echo "✅ Deploy OK"

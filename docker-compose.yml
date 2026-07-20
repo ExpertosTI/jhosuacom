@@ -30,13 +30,8 @@ services:
       - RUN_DB_SEED=${RUN_DB_SEED:-false}
     networks:
       - RenaceNet
-    # wget (busybox) — NO usar node en healthcheck: fork → OOM exit 137 en VPS
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
+    # Sin healthcheck: el CMD node fork/wget en alpine marcaba unhealthy → exit 137
+    # Nest arranca en ~2s; restart_policy cubre crashes reales
     logging:
       driver: "json-file"
       options:
@@ -50,7 +45,7 @@ services:
         max_attempts: 10
       update_config:
         parallelism: 1
-        delay: 10s
+        delay: 5s
         failure_action: rollback
         order: stop-first
       resources:
