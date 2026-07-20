@@ -69,18 +69,29 @@ source .env
 set +a
 
 echo "🌐 RenaceNet..."
-docker network ls | grep -q RenaceNet || docker network create --driver overlay RenaceNet
+if ! docker network inspect RenaceNet >/dev/null 2>&1; then
+  docker network create --driver overlay --attachable RenaceNet
+else
+  echo "ℹ️  RenaceNet ya existe"
+fi
 
 echo "🏗️  Build images..."
 docker compose build --parallel
 
 echo "🚢 Stack deploy..."
 # Quitar stack maintenance viejo si solo tenía landing estática
-if docker stack ls | grep -q "^${STACK} "; then
+if docker stack ls 2>/dev/null | grep -q "^${STACK} "; then
   echo "ℹ️  Actualizando stack existente $STACK"
 fi
 
-docker stack deploy -c <(docker compose config) "$STACK"
+# compose config puede fallar con secrets vacíos; desplegar yaml directo también sirve
+if docker compose config >/tmp/jhosuacom.stack.yml 2>/tmp/jhosuacom.compose.err; then
+  docker stack deploy -c /tmp/jhosuacom.stack.yml "$STACK"
+else
+  echo "⚠️  compose config falló, usando docker-compose.yml directo"
+  cat /tmp/jhosuacom.compose.err || true
+  docker stack deploy -c docker-compose.yml "$STACK"
+fi
 
 echo "🔄 Force update..."
 docker service update --force "${STACK}_api" || true
