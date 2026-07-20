@@ -5,21 +5,28 @@ export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
 
   private enabled() {
-    return Boolean(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY);
+    return Boolean(this.apiKey());
   }
 
   instance() {
     return process.env.EVOLUTION_INSTANCE || 'jhhogar';
   }
 
+  private apiKey() {
+    return (process.env.EVOLUTION_API_KEY || '').trim();
+  }
+
   private baseUrl() {
-    return (process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
+    return (process.env.EVOLUTION_API_URL || 'https://evoapi.renace.tech').replace(
+      /\/$/,
+      '',
+    );
   }
 
   private headers() {
     return {
       'Content-Type': 'application/json',
-      apikey: process.env.EVOLUTION_API_KEY || '',
+      apikey: this.apiKey(),
     };
   }
 
@@ -111,7 +118,7 @@ export class WhatsAppService {
   async startQr() {
     const instance = this.instance();
     if (!this.enabled()) {
-      return { ok: false, qr: null as string | null, error: 'Configura EVOLUTION_API_URL y EVOLUTION_API_KEY' };
+      return { ok: false, qr: null as string | null, error: 'Evolution no configurado en el servidor' };
     }
 
     // Create if missing (ignore "already exists")

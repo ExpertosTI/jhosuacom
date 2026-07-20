@@ -1,0 +1,7 @@
+# Evolution API — NO subir a git
+# En Mac: ./scripts/push-evo.sh  (copia clave global de rnv-manger → VPS)
+# En VPS: deploy.sh la inyecta en .env desde este archivo o rutas compartidas Renace
+
+EVOLUTION_API_URL=https://evoapi.renace.tech
+EVOLUTION_API_KEY=
+EVOLUTION_INSTANCE=jhhogar

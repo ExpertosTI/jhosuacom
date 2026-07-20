@@ -72,7 +72,7 @@ ODOO_DB=
 ODOO_USERNAME=
 ODOO_API_KEY=
 ODOO_COMPANY_IDS=
-EVOLUTION_API_URL=
+EVOLUTION_API_URL=https://evoapi.renace.tech
 EVOLUTION_API_KEY=
 EVOLUTION_INSTANCE=jhhogar
 ADMIN_NOTIFY_PHONES=
@@ -89,6 +89,77 @@ grep -q '^RUN_DB_PUSH=' .env \
 grep -q '^RUN_DB_SEED=' .env \
   && sed -i 's|^RUN_DB_SEED=.*|RUN_DB_SEED=false|' .env \
   || echo 'RUN_DB_SEED=false' >> .env
+
+# ── Evolution API: inyectar desde secretos Renace (nunca pedir en el admin) ──
+upsert_env() {
+  local key="$1" val="$2"
+  if grep -q "^${key}=" .env 2>/dev/null; then
+    # Solo rellenar si está vacío
+    local cur
+    cur="$(grep "^${key}=" .env | head -1 | cut -d= -f2-)"
+    if [ -z "$cur" ] && [ -n "$val" ]; then
+      sed -i "s|^${key}=.*|${key}=${val}|" .env
+    fi
+  else
+    echo "${key}=${val}" >> .env
+  fi
+}
+
+force_env() {
+  local key="$1" val="$2"
+  if grep -q "^${key}=" .env 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" .env
+  else
+    echo "${key}=${val}" >> .env
+  fi
+}
+
+EVO_SRC=""
+for src in \
+  "$PROJECT_DIR/.evolution.local" \
+  /opt/QuickCtgo/.evolution.local \
+  /opt/rnv-manger/.evolution.local \
+  /opt/zuv/.evolution.local \
+  /opt/zav/.evolution.local \
+  /opt/raices/.evolution.local
+do
+  if [ -f "$src" ] && grep -q '^EVOLUTION_API_KEY=.\+' "$src"; then
+    EVO_SRC="$src"
+    break
+  fi
+done
+
+if [ -n "$EVO_SRC" ]; then
+  echo "📲 Evolution desde $EVO_SRC"
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%%#*}"
+    line="$(echo "$line" | tr -d '\r')"
+    [ -z "$line" ] && continue
+    key="${line%%=*}"
+    val="${line#*=}"
+    case "$key" in
+      EVOLUTION_API_URL|EVOLUTION_API_KEY)
+        # URL/key: rellenar si vacío; si .evolution.local del proyecto, forzar
+        if [ "$EVO_SRC" = "$PROJECT_DIR/.evolution.local" ]; then
+          force_env "$key" "$val"
+        else
+          upsert_env "$key" "$val"
+        fi
+        ;;
+    esac
+  done < "$EVO_SRC"
+else
+  echo "ℹ️  Sin .evolution.local — corre en Mac: ./scripts/push-evo.sh"
+fi
+
+force_env EVOLUTION_INSTANCE "jhhogar"
+upsert_env EVOLUTION_API_URL "https://evoapi.renace.tech"
+
+if grep -q '^EVOLUTION_API_KEY=.\+' .env; then
+  echo "✅ Evolution API key lista (instancia jhhogar)"
+else
+  echo "⚠️  EVOLUTION_API_KEY vacía — WhatsApp QR no funcionará hasta push-evo"
+fi
 
 set -a
 # shellcheck disable=SC1091
@@ -163,8 +234,8 @@ echo "✅ Deploy OK"
 echo "   Web:   https://jhosuacomercial.com"
 echo "   API:   https://jhosuacomercial.com/api/health"
 echo "   Admin: https://jhosuacomercial.com/admin/login"
-echo "   WA:    https://jhosuacomercial.com/admin/whatsapp  (EVOLUTION_*)"
-echo "   Odoo:  ODOO_MOCK=false + ODOO_API_KEY en .env → /admin/odoo sync"
+echo "   WA:    https://jhosuacomercial.com/admin/whatsapp  (QR — Evolution auto)"
+echo "   Odoo:  /admin/odoo (URL/DB/user/API key en panel)"
 echo "   User:  admin@jhhogar.com  (ver ADMIN_PASSWORD en .env)"
 echo "-----------------------------------"
 docker stack services "$STACK"

@@ -18,7 +18,7 @@ export default function AdminWhatsAppPage() {
   const [qr, setQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
-  const [msg, setMsg] = useState<string>('');
+  const [msg, setMsg] = useState('');
   const [testPhone, setTestPhone] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -65,7 +65,7 @@ export default function AdminWhatsAppPage() {
           await loadStatus();
         }
       } catch {
-        /* ignore transient poll errors */
+        /* ignore */
       }
     }, 3500);
   }, [loadStatus, stopPoll]);
@@ -88,7 +88,7 @@ export default function AdminWhatsAppPage() {
       }
       if (res.qr) {
         setQr(res.qr);
-        setMsg('Escanea el QR con WhatsApp');
+        setMsg('Escanea el QR con WhatsApp → Dispositivos vinculados');
         startPoll();
       } else {
         setMsg(res.error || 'No se obtuvo QR');
@@ -132,7 +132,7 @@ export default function AdminWhatsAppPage() {
         },
       );
       if (res.ok) {
-        setMsg(res.mock ? 'Mock: mensaje no enviado (sin Evolution)' : 'Mensaje de prueba enviado');
+        setMsg(res.mock ? 'Sin Evolution en servidor — mensaje no enviado' : 'Mensaje de prueba enviado');
       } else {
         setMsg(res.error || res.reason || 'Falló el envío');
       }
@@ -153,7 +153,7 @@ export default function AdminWhatsAppPage() {
     <div>
       <h1 className="font-display text-4xl text-chrome">WhatsApp</h1>
       <p className="mt-1 text-sm text-chrome-muted">
-        Instancia Evolution · escanea QR · notificaciones de pedidos y deudas
+        Escanea el QR para vincular la instancia JH Hogar. Las notificaciones salen solas.
       </p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -162,20 +162,14 @@ export default function AdminWhatsAppPage() {
           <div className="mt-3 flex items-center gap-2">
             <MessageCircle className={`h-5 w-5 ${open ? 'text-gold-light' : 'text-chrome-muted'}`} />
             <p className="text-lg text-gold-light">
-              {open ? 'Conectado' : status?.configured ? 'Desconectado' : 'Sin configurar'}
+              {open ? 'Conectado' : status?.configured ? 'Desconectado' : 'Servidor sin Evolution'}
             </p>
           </div>
           <div className="mt-4 space-y-1 font-raj text-[11px] uppercase tracking-wider text-chrome-muted">
-            <p>Instancia: {status?.instanceName}</p>
+            <p>Instancia: {status?.instanceName || 'jhhogar'}</p>
             <p>Estado: {status?.connectionState || '—'}</p>
             {status?.phone && <p>Número: {status.phone}</p>}
-            {status?.apiUrl && <p>API: {status.apiUrl}</p>}
           </div>
-          {!status?.configured && (
-            <p className="mt-4 text-sm text-chrome-muted">
-              Define EVOLUTION_API_URL, EVOLUTION_API_KEY y EVOLUTION_INSTANCE en el .env del VPS.
-            </p>
-          )}
 
           <div className="mt-6 flex flex-wrap gap-2">
             <button
@@ -185,12 +179,12 @@ export default function AdminWhatsAppPage() {
               className="inline-flex items-center gap-2 bg-gold px-5 py-2.5 font-raj text-xs font-bold uppercase tracking-widest text-ink disabled:opacity-50"
             >
               <QrCode className="h-3.5 w-3.5" />
-              {busy === 'qr' ? 'Generando…' : open ? 'Reconectar / QR' : 'Escanear QR'}
+              {busy === 'qr' ? 'Generando…' : open ? 'Nuevo QR' : 'Generar QR'}
             </button>
             <button
               type="button"
               onClick={disconnect}
-              disabled={!!busy || !status?.configured}
+              disabled={!!busy || !status?.configured || !open}
               className="inline-flex items-center gap-2 border border-gold/30 px-5 py-2.5 font-raj text-xs font-bold uppercase tracking-widest text-gold-light disabled:opacity-50"
             >
               <Power className="h-3.5 w-3.5" />
@@ -219,7 +213,9 @@ export default function AdminWhatsAppPage() {
             <p className="mt-4 text-sm text-chrome-muted">
               {open
                 ? 'Conectado — no hace falta QR.'
-                : 'Pulsa “Escanear QR” y abre WhatsApp → Dispositivos vinculados.'}
+                : status?.configured
+                  ? 'Pulsa “Generar QR” y ábrelo en WhatsApp.'
+                  : 'Evolution aún no está en este servidor. En el Mac: ./scripts/push-evo.sh'}
             </p>
           )}
 
@@ -230,13 +226,13 @@ export default function AdminWhatsAppPage() {
             <input
               value={testPhone}
               onChange={(e) => setTestPhone(e.target.value)}
-              placeholder="Teléfono (o usa ADMIN_NOTIFY_PHONES)"
+              placeholder="Teléfono con código país"
               className="mt-3 w-full border border-gold/25 bg-ink-2 px-3 py-2 text-sm outline-none focus:border-gold/50"
             />
             <button
               type="button"
               onClick={sendTest}
-              disabled={!!busy || !status?.configured}
+              disabled={!!busy || !status?.configured || !open}
               className="mt-3 inline-flex items-center gap-2 border border-gold/30 px-5 py-2.5 font-raj text-xs font-bold uppercase tracking-widest text-gold-light disabled:opacity-50"
             >
               <Send className="h-3.5 w-3.5" />
