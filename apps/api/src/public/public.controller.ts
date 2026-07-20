@@ -15,40 +15,46 @@ export class PublicController {
   @Public()
   @Get('catalog')
   async catalog(@Query('company') company?: string, @Query('q') q?: string) {
-    const cos = await this.db.query.companies.findMany({
-      where: eq(companies.active, true),
-      orderBy: [asc(companies.sortOrder)],
-    });
+    try {
+      const cos = await this.db.query.companies.findMany({
+        where: eq(companies.active, true),
+        orderBy: [asc(companies.sortOrder)],
+      });
 
-    const conditions: any[] = [eq(products.active, true)];
-    if (company) {
-      const co = cos.find((c: any) => c.slug === company || c.id === company);
-      if (co) conditions.push(eq(products.companyId, co.id));
+      const conditions: any[] = [eq(products.active, true)];
+      if (company) {
+        const co = cos.find((c: any) => c.slug === company || c.id === company);
+        if (co) conditions.push(eq(products.companyId, co.id));
+      }
+      if (q?.trim()) {
+        const term = `%${q.trim()}%`;
+        conditions.push(or(ilike(products.name, term), ilike(products.sku, term)));
+      }
+
+      const items = await this.db.query.products.findMany({
+        where: and(...conditions),
+        with: { company: true },
+        orderBy: [asc(products.name)],
+        limit: 300,
+      });
+
+      const shop = await this.db.query.settings.findFirst({
+        where: eq(settings.key, 'shop'),
+      });
+
+      return {
+        brand: shop?.value || {
+          brandName: 'JH Hogar',
+          tagline: 'Artículos y electrodomésticos para el hogar',
+        },
+        companies: cos,
+        products: items,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[catalog]', message);
+      throw err;
     }
-    if (q?.trim()) {
-      const term = `%${q.trim()}%`;
-      conditions.push(or(ilike(products.name, term), ilike(products.sku, term)));
-    }
-
-    const items = await this.db.query.products.findMany({
-      where: and(...conditions),
-      with: { company: true },
-      orderBy: [asc(products.name)],
-      limit: 300,
-    });
-
-    const shop = await this.db.query.settings.findFirst({
-      where: eq(settings.key, 'shop'),
-    });
-
-    return {
-      brand: shop?.value || {
-        brandName: 'JH Hogar',
-        tagline: 'Artículos y electrodomésticos para el hogar',
-      },
-      companies: cos,
-      products: items,
-    };
   }
 
   @Public()
