@@ -56,21 +56,8 @@ services:
         limits:
           cpus: "0.50"
           memory: "768M"
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=RenaceNet"
-        # Mismo dominio que la web → no depende de DNS api.*
-        - "traefik.http.routers.jhosua-api-http.rule=(Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)) && PathPrefix(`/api`)"
-        - "traefik.http.routers.jhosua-api-http.entrypoints=web"
-        - "traefik.http.routers.jhosua-api-http.priority=100"
-        - "traefik.http.routers.jhosua-api-http.middlewares=jhosua-api-redirect"
-        - "traefik.http.middlewares.jhosua-api-redirect.redirectscheme.scheme=https"
-        - "traefik.http.routers.jhosua-api.rule=(Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)) && PathPrefix(`/api`)"
-        - "traefik.http.routers.jhosua-api.entrypoints=websecure"
-        - "traefik.http.routers.jhosua-api.priority=100"
-        - "traefik.http.routers.jhosua-api.tls=true"
-        - "traefik.http.routers.jhosua-api.tls.certresolver=letsencryptresolver"
-        - "traefik.http.services.jhosua-api.loadbalancer.server.port=3000"
+      # API solo interna (la web hace proxy /api → jhosuacom_api)
+      # Sin labels Traefik públicas: evita 404 de Next cuando PathPrefix falla
 
   web:
     image: jhosuacom-web:latest
@@ -78,9 +65,11 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://jhosuacomercial.com/api}
+        NEXT_PUBLIC_API_URL: /api
+        INTERNAL_API_URL: http://jhosuacom_api:3000
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://jhosuacomercial.com/api}
+      - NEXT_PUBLIC_API_URL=/api
+      - INTERNAL_API_URL=http://jhosuacom_api:3000
     networks:
       - RenaceNet
     healthcheck:
@@ -113,13 +102,11 @@ services:
         - "traefik.docker.network=RenaceNet"
         - "traefik.http.routers.jhosua-web-http.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
         - "traefik.http.routers.jhosua-web-http.entrypoints=web"
-        - "traefik.http.routers.jhosua-web-http.priority=1"
         - "traefik.http.routers.jhosua-web-http.middlewares=jhosua-web-redirect"
         - "traefik.http.middlewares.jhosua-web-redirect.redirectscheme.scheme=https"
         - "traefik.http.middlewares.jhosua-web-redirect.redirectscheme.permanent=true"
         - "traefik.http.routers.jhosua-web.rule=Host(`jhosuacomercial.com`) || Host(`www.jhosuacomercial.com`)"
         - "traefik.http.routers.jhosua-web.entrypoints=websecure"
-        - "traefik.http.routers.jhosua-web.priority=1"
         - "traefik.http.routers.jhosua-web.tls=true"
         - "traefik.http.routers.jhosua-web.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.jhosua-web.loadbalancer.server.port=3000"

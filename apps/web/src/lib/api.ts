@@ -1,5 +1,5 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:3100/api';
+/** Base URL del API. En producción usar path relativo `/api` (proxy Next → Nest). */
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
 
 export type PriceMode = 'detal' | 'mayor';
 

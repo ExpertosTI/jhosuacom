@@ -80,14 +80,18 @@ set -a
 . ./.env
 set +a
 
-# Forzar API en mismo dominio (evita Failed to fetch por DNS api.*)
-if grep -q 'api.jhosuacomercial.com' .env 2>/dev/null; then
-  sed -i 's|https://api.jhosuacomercial.com/api|https://jhosuacomercial.com/api|g' .env
+# Forzar API relativa (proxy Next → Nest en Swarm)
+if ! grep -q '^NEXT_PUBLIC_API_URL=/api$' .env 2>/dev/null; then
+  grep -q '^NEXT_PUBLIC_API_URL=' .env \
+    && sed -i 's|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=/api|' .env \
+    || echo 'NEXT_PUBLIC_API_URL=/api' >> .env
+  grep -q '^INTERNAL_API_URL=' .env \
+    || echo 'INTERNAL_API_URL=http://jhosuacom_api:3000' >> .env
   set -a
   # shellcheck disable=SC1091
   . ./.env
   set +a
-  echo "ℹ️  NEXT_PUBLIC_API_URL → https://jhosuacomercial.com/api"
+  echo "ℹ️  API vía proxy: NEXT_PUBLIC_API_URL=/api → jhosuacom_api"
 fi
 
 echo "🌐 RenaceNet..."
@@ -103,9 +107,19 @@ docker compose build --parallel
 echo "🚢 Stack deploy (yaml directo, sin compose config)..."
 docker stack deploy -c docker-compose.yml "$STACK"
 
-echo "⏳ Esperando API (hasta 90s)..."
-for i in $(seq 1 18); do
-  if docker service ls --format '{{.Name}} {{.Replicas}}' | grep -q 'jhosuacom_api 1/1'; then
+# Quitar routers Traefik viejos del API (PathPrefix) si quedaron
+docker service update --label-rm traefik.enable \
+  --label-rm traefik.http.routers.jhosua-api.rule \
+  --label-rm traefik.http.routers.jhosua-api-http.rule \
+  "${STACK}_api" 2>/dev/null || true
+
+echo "🔄 Force update (nueva imagen)..."
+docker service update --force --image jhosuacom-api:latest "${STACK}_api" || true
+docker service update --force --image jhosuacom-web:latest "${STACK}_web" || true
+
+echo "⏳ Esperando API 1/1 (hasta 120s)..."
+for i in $(seq 1 24); do
+  if docker service ls --format '{{.Name}} {{.Replicas}}' | grep -qE 'jhosuacom_api[[:space:]]+1/1'; then
     echo "✅ API 1/1"
     break
   fi

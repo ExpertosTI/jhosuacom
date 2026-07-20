@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MessageCircle, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/lib/cart';
+import { API_URL } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const [wa, setWa] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3100/api'}/public/whatsapp-link`)
+    fetch(`${API_URL}/public/whatsapp-link`)
       .then((r) => r.json())
       .then((d) => setWa(d.url))
       .catch(() => {});
