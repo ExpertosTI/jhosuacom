@@ -125,9 +125,20 @@ grep -E '^EVOLUTION_(API_URL|INSTANCE)=' .env || true
 test -n "$(grep '^EVOLUTION_API_KEY=' .env | cut -d= -f2-)" && echo "EVOLUTION_API_KEY: set" || echo "EVOLUTION_API_KEY: MISSING"
 
 if [ "$DO_DEPLOY" = "1" ]; then
-  # Re-aplicar stack para que Swarm tome env del .env (compose)
+  # CRÍTICO: interpolar ${EVOLUTION_*} desde .env al yaml de Swarm
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+  echo "── Stack deploy con EVOLUTION_API_KEY len=${#EVOLUTION_API_KEY} ──"
   docker stack deploy -c docker-compose.yml jhosuacom
   docker service update --force --no-healthcheck jhosuacom_api 2>/dev/null || true
+  sleep 4
+  # Verificar que el contenedor recibió la key
+  CID="$(docker ps -q -f name=jhosuacom_api | head -1 || true)"
+  if [ -n "$CID" ]; then
+    docker exec "$CID" sh -c 'test -n "$EVOLUTION_API_KEY" && echo "API container: EVOLUTION_API_KEY set (len=${#EVOLUTION_API_KEY})" || echo "API container: EVOLUTION_API_KEY MISSING"'
+  fi
 fi
 REMOTE
 

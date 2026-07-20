@@ -30,16 +30,42 @@ export class WhatsAppService {
     };
   }
 
+  /** Mensajes claros para admin (401 = clave global incorrecta). */
+  private humanizeError(err?: string | null, status?: number): string {
+    const e = String(err || '').toLowerCase();
+    if (status === 401 || e.includes('unauthorized') || e.includes('forbidden')) {
+      return (
+        'Evolution rechazó la API key (Unauthorized). ' +
+        'En el VPS debe estar la clave GLOBAL de evoapi (AUTHENTICATION_API_KEY), ' +
+        'no un token de instancia. Corre: ./scripts/push-evo.sh y vuelve a Generar QR.'
+      );
+    }
+    if (status === 404 || e.includes('not found')) {
+      return 'Instancia WhatsApp no encontrada en Evolution. Se intentará crear al pedir QR.';
+    }
+    if (e.includes('timeout') || e.includes('fetch failed') || e.includes('network')) {
+      return 'No se pudo alcanzar evoapi.renace.tech desde el servidor.';
+    }
+    return err || (status ? `HTTP ${status}` : 'Error Evolution');
+  }
+
   private extractQr(data: any): string | null {
-    const raw =
-      data?.qrcode?.base64 ||
-      data?.base64 ||
-      data?.qrcode?.code ||
-      data?.code ||
-      null;
-    if (!raw || typeof raw !== 'string') return null;
-    if (raw.startsWith('data:')) return raw;
-    return `data:image/png;base64,${raw}`;
+    const candidates = [
+      data?.qrcode?.base64,
+      data?.base64,
+      data?.qr?.base64,
+      typeof data?.qrcode === 'string' ? data.qrcode : null,
+      data?.qrcode?.code,
+      data?.code,
+    ];
+    for (const raw of candidates) {
+      if (!raw || typeof raw !== 'string') continue;
+      const cleaned = raw.replace(/^data:image\/[a-zA-Z+]+;base64,/, '');
+      // Ignorar pairing codes cortos; necesitamos imagen base64
+      if (cleaned.length < 80) continue;
+      return raw.startsWith('data:') ? raw : `data:image/png;base64,${cleaned}`;
+    }
+    return null;
   }
 
   private async evo(path: string, init: RequestInit = {}) {
@@ -57,15 +83,21 @@ export class WhatsAppService {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        const error =
+        const raw =
           data?.message || data?.error || data?.response?.message || `HTTP ${res.status}`;
-        this.logger.error(`Evolution ${path}: ${error}`);
-        return { ok: false as const, status: res.status, data, error: String(error) };
+        const error = this.humanizeError(String(raw), res.status);
+        this.logger.error(`Evolution ${path}: ${res.status} ${raw}`);
+        return { ok: false as const, status: res.status, data, error };
       }
       return { ok: true as const, status: res.status, data, error: null };
     } catch (e: any) {
       this.logger.error(`Evolution network ${path}: ${e.message}`);
-      return { ok: false as const, status: 0, data: null, error: e.message || 'network' };
+      return {
+        ok: false as const,
+        status: 0,
+        data: null,
+        error: this.humanizeError(e.message || 'network', 0),
+      };
     }
   }
 
@@ -82,6 +114,18 @@ export class WhatsAppService {
     return s;
   }
 
+  /** Probe con clave global (fetchInstances). */
+  async probeAuth() {
+    if (!this.enabled()) {
+      return { ok: false as const, error: 'Evolution no configurado', status: 0 };
+    }
+    const res = await this.evo('/instance/fetchInstances');
+    if (!res.ok) {
+      return { ok: false as const, error: res.error, status: res.status };
+    }
+    return { ok: true as const, error: null as string | null, status: res.status };
+  }
+
   async getStatus() {
     const instance = this.instance();
     const configured = this.enabled();
@@ -92,9 +136,12 @@ export class WhatsAppService {
         connectionState: null as string | null,
         phone: null as string | null,
         apiUrl: this.baseUrl() || null,
+        authOk: false,
+        error: 'EVOLUTION_API_KEY vacía en el servidor. Corre ./scripts/push-evo.sh',
       };
     }
 
+    const probe = await this.probeAuth();
     const res = await this.evo(`/instance/connectionState/${encodeURIComponent(instance)}`);
     const raw =
       res.data?.instance?.state ||
@@ -109,7 +156,8 @@ export class WhatsAppService {
       connectionState: state,
       phone: res.data?.instance?.owner || res.data?.owner || null,
       apiUrl: this.baseUrl(),
-      error: res.ok ? null : res.error,
+      authOk: probe.ok,
+      error: probe.ok ? (res.ok ? null : res.error) : probe.error,
     };
   }
 
@@ -131,6 +179,8 @@ export class WhatsAppService {
       return { ok: false, qr: null as string | null, error: 'Evolution no configurado en el servidor' };
     }
 
+    const probe = await this.probeAuth();
+
     const live = await this.evo(`/instance/connectionState/${encodeURIComponent(instance)}`);
     if (live.ok) {
       const state = this.normalizeState(
@@ -147,6 +197,10 @@ export class WhatsAppService {
     let qr = this.extractQr(connected.data);
     if (qr) return { ok: true, qr, error: null };
 
+    if (!probe.ok && (connected.status === 401 || live.status === 401)) {
+      return { ok: false, qr: null, error: probe.error };
+    }
+
     const missing =
       connected.status === 404 ||
       live.status === 404 ||
@@ -160,7 +214,11 @@ export class WhatsAppService {
       };
     }
 
-    // Crear instancia si no existe
+    if (!probe.ok) {
+      return { ok: false, qr: null, error: probe.error };
+    }
+
+    // Crear instancia si no existe (misma forma que ZAV / evoapi global)
     const created = await this.evo('/instance/create', {
       method: 'POST',
       body: JSON.stringify({

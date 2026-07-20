@@ -11,6 +11,8 @@ type WaStatus = {
   connectionState: string | null;
   phone: string | null;
   apiUrl: string | null;
+  authOk?: boolean;
+  error?: string | null;
 };
 
 export default function AdminWhatsAppPage() {
@@ -33,15 +35,19 @@ export default function AdminWhatsAppPage() {
     try {
       const s = await api<WaStatus>('/whatsapp/status', { token: token() });
       setStatus(s);
+      if (s.error && !s.authOk) setMsg(s.error);
       return s;
-    } catch {
+    } catch (e: any) {
       setStatus({
         configured: false,
         instanceName: 'jhhogar',
         connectionState: null,
         phone: null,
         apiUrl: null,
+        authOk: false,
+        error: e.message || 'No se pudo cargar estado',
       });
+      setMsg(e.message || 'No se pudo cargar estado WhatsApp');
       return null;
     }
   }, []);
@@ -177,9 +183,15 @@ export default function AdminWhatsAppPage() {
             </p>
             {status?.phone && <p>Número: {status.phone}</p>}
           </div>
-          {status?.configured && !open && (
+          {status?.configured && status.authOk === false && (
+            <p className="mt-3 border border-gold/30 bg-gold/5 p-3 text-xs text-gold-light">
+              Evolution rechaza la API key. En el Mac corre{' '}
+              <code className="text-chrome">./scripts/push-evo.sh</code> y refresca.
+            </p>
+          )}
+          {status?.configured && status.authOk !== false && !open && (
             <p className="mt-3 text-xs text-chrome-muted">
-              Si ves errores previos de 404, pulsa Generar QR: crea/conecta la instancia automáticamente.
+              Pulsa Generar QR: crea/conecta la instancia automáticamente.
             </p>
           )}
 
@@ -187,7 +199,7 @@ export default function AdminWhatsAppPage() {
             <button
               type="button"
               onClick={connect}
-              disabled={!!busy || !status?.configured}
+              disabled={!!busy || !status?.configured || status.authOk === false}
               className="inline-flex items-center gap-2 bg-gold px-5 py-2.5 font-raj text-xs font-bold uppercase tracking-widest text-ink disabled:opacity-50"
             >
               <QrCode className="h-3.5 w-3.5" />
