@@ -119,6 +119,11 @@ fi
 echo "🏗️  Build images..."
 docker compose build --parallel
 
+# Limpiar tareas stuck (Starting/Failed) antes de redeploy
+echo "🛑 Reset API tasks..."
+docker service scale "${STACK}_api=0" 2>/dev/null || true
+sleep 3
+
 echo "🚢 Stack deploy (yaml directo, sin compose config)..."
 docker stack deploy -c docker-compose.yml "$STACK"
 

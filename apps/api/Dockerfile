@@ -19,13 +19,12 @@ ENV NODE_ENV=production
 ENV API_PORT=3000
 ENV DB_HOST=jhosua-db
 ENV DB_PORT=5432
+# Cap heap: evita OOM (137) en Swarm con límite ~512M
+ENV NODE_OPTIONS=--max-old-space-size=384
 COPY --from=builder /prod/ ./
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/packages/db/dist ./node_modules/@jhosua/db/dist
 COPY --from=builder /app/packages/db/package.json ./node_modules/@jhosua/db/package.json
-# Schema tools (migrate/seed one-shot desde deploy)
-COPY --from=builder /app/packages/db /opt/db
-COPY --from=builder /app/node_modules /opt/db-node_modules
 COPY apps/api/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
   && test -f dist/main.js \

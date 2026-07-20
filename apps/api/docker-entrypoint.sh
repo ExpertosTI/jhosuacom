@@ -33,19 +33,12 @@ let tries = 0;
 })();
 NODE
 
-# Migrate + seed solo si se pide explícitamente (por defecto OFF: evita OOM en Swarm)
-if [ "${RUN_DB_PUSH:-false}" = "true" ] && [ -d /opt/db ]; then
-  echo "📦 drizzle push..."
-  export NODE_PATH="/opt/db-node_modules:${NODE_PATH:-}"
-  (cd /opt/db && NODE_PATH="/opt/db-node_modules" /opt/db-node_modules/.bin/drizzle-kit push --force) \
-    || echo "⚠️  push omitido"
+# migrate/seed: solo offline / one-shot (imagen slim ya no incluye drizzle-kit)
+if [ "${RUN_DB_PUSH:-false}" = "true" ]; then
+  echo "ℹ️  RUN_DB_PUSH=true ignorado (usar drizzle localmente)"
 fi
-
-if [ "${RUN_DB_SEED:-false}" = "true" ] && [ -d /opt/db ]; then
-  echo "🌱 seed..."
-  export NODE_PATH="/opt/db-node_modules:${NODE_PATH:-}"
-  (cd /opt/db && NODE_PATH="/opt/db-node_modules" /opt/db-node_modules/.bin/tsx src/seed.ts) \
-    || echo "⚠️  seed omitido"
+if [ "${RUN_DB_SEED:-false}" = "true" ]; then
+  echo "ℹ️  RUN_DB_SEED=true ignorado (usar seed localmente)"
 fi
 
 echo "🚀 API :${API_PORT:-3000}"
