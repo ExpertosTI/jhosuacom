@@ -57,7 +57,7 @@ DATABASE_URL=postgres://jhosua:${DB_PASS}@jhosua-db:5432/jhosua
 JWT_SECRET=${JWT}
 ADMIN_EMAIL=admin@jhhogar.com
 ADMIN_PASSWORD=JhHogarAdmin2026!
-NEXT_PUBLIC_API_URL=https://api.jhosuacomercial.com/api
+NEXT_PUBLIC_API_URL=https://jhosuacomercial.com/api
 PUBLIC_WEB_URL=https://jhosuacomercial.com
 ODOO_MOCK=true
 ODOO_URL=
@@ -80,6 +80,16 @@ set -a
 . ./.env
 set +a
 
+# Forzar API en mismo dominio (evita Failed to fetch por DNS api.*)
+if grep -q 'api.jhosuacomercial.com' .env 2>/dev/null; then
+  sed -i 's|https://api.jhosuacomercial.com/api|https://jhosuacomercial.com/api|g' .env
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+  echo "ℹ️  NEXT_PUBLIC_API_URL → https://jhosuacomercial.com/api"
+fi
+
 echo "🌐 RenaceNet..."
 if ! docker network inspect RenaceNet >/dev/null 2>&1; then
   docker network create --driver overlay --attachable RenaceNet
@@ -93,14 +103,22 @@ docker compose build --parallel
 echo "🚢 Stack deploy (yaml directo, sin compose config)..."
 docker stack deploy -c docker-compose.yml "$STACK"
 
-echo "🔄 Force update..."
-docker service update --force "${STACK}_api" || true
-docker service update --force "${STACK}_web" || true
+echo "⏳ Esperando API (hasta 90s)..."
+for i in $(seq 1 18); do
+  if docker service ls --format '{{.Name}} {{.Replicas}}' | grep -q 'jhosuacom_api 1/1'; then
+    echo "✅ API 1/1"
+    break
+  fi
+  sleep 5
+done
 
 echo "-----------------------------------"
 echo "✅ Deploy OK"
 echo "   Web:   https://jhosuacomercial.com"
-echo "   API:   https://api.jhosuacomercial.com/api/health"
-echo "   Admin: https://jhosuacomercial.com/admin"
+echo "   API:   https://jhosuacomercial.com/api/health"
+echo "   Admin: https://jhosuacomercial.com/admin/login"
+echo "   User:  admin@jhhogar.com  (ver ADMIN_PASSWORD en .env)"
 echo "-----------------------------------"
 docker stack services "$STACK"
+docker service ps jhosuacom_api --no-trunc | head -8 || true
+
