@@ -1,48 +1,41 @@
-import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
-import { and, asc, eq, ilike, or } from 'drizzle-orm';
-import { companies, products } from '@jhosua/db';
+import { Body, Controller, Get, Inject, Param, Patch, Query } from '@nestjs/common';
+import { asc, eq } from 'drizzle-orm';
+import { companies } from '@jhosua/db';
 import { DRIZZLE } from '../database/database.module';
 import { Public } from '../auth/auth.guard';
+import { ProductsService, type ProductUpdateInput } from './products.service';
 
 @Controller('products')
 export class ProductsController {
-  constructor(@Inject(DRIZZLE) private db: any) {}
+  constructor(private products: ProductsService) {}
 
   @Get()
   async list(
     @Query('company') company?: string,
     @Query('q') q?: string,
     @Query('featured') featured?: string,
+    @Query('active') active?: 'true' | 'false' | 'all',
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    const conditions: any[] = [eq(products.active, true)];
-    if (company) {
-      const co = await this.db.query.companies.findFirst({
-        where: or(eq(companies.slug, company), eq(companies.id, company)),
-      });
-      if (co) conditions.push(eq(products.companyId, co.id));
-    }
-    if (featured === '1' || featured === 'true') {
-      conditions.push(eq(products.featured, true));
-    }
-    if (q?.trim()) {
-      const term = `%${q.trim()}%`;
-      conditions.push(or(ilike(products.name, term), ilike(products.sku, term)));
-    }
-
-    return this.db.query.products.findMany({
-      where: and(...conditions),
-      with: { company: true },
-      orderBy: [asc(products.name)],
-      limit: 200,
+    return this.products.list({
+      company,
+      q,
+      featured: featured === '1' || featured === 'true',
+      active: active || 'all',
+      limit: Number(limit) || 50,
+      offset: Number(offset) || 0,
     });
   }
 
   @Get(':id')
-  async one(@Param('id') id: string) {
-    return this.db.query.products.findFirst({
-      where: eq(products.id, id),
-      with: { company: true },
-    });
+  one(@Param('id') id: string) {
+    return this.products.get(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: ProductUpdateInput) {
+    return this.products.update(id, body || {});
   }
 }
 

@@ -219,16 +219,33 @@ export class OrdersService {
     };
   }
 
-  async list(limit = 50) {
-    const rows = await this.db.query.orders.findMany({
+  async list(limit = 50, opts?: { status?: string; q?: string }) {
+    const take = Math.min(200, Math.max(1, limit));
+    let rows = await this.db.query.orders.findMany({
       orderBy: [desc(orders.createdAt)],
-      limit,
+      limit: take * 2,
       with: {
         items: { with: { product: true } },
         company: true,
       },
     });
-    return rows.map((o: any) => this.withItemImages(o));
+    if (opts?.status && opts.status !== 'all') {
+      rows = rows.filter((o: any) => o.status === opts.status);
+    }
+    if (opts?.q?.trim()) {
+      const term = opts.q.trim().toLowerCase();
+      rows = rows.filter(
+        (o: any) =>
+          String(o.number || '')
+            .toLowerCase()
+            .includes(term) ||
+          String(o.customerName || '')
+            .toLowerCase()
+            .includes(term) ||
+          String(o.customerPhone || '').includes(term),
+      );
+    }
+    return rows.slice(0, take).map((o: any) => this.withItemImages(o));
   }
 
   async getById(id: string) {
@@ -263,6 +280,19 @@ export class OrdersService {
       .update(orders)
       .set({ status: status as any, updatedAt: new Date() })
       .where(eq(orders.id, id));
+    return this.getById(id);
+  }
+
+  async updateMeta(id: string, body: { notes?: string | null; status?: string }) {
+    await this.getById(id);
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.notes !== undefined) patch.notes = body.notes ? String(body.notes).trim() : null;
+    if (body.status) {
+      const allowed = ['received', 'quoted', 'confirmed', 'invoiced', 'cancelled'];
+      if (!allowed.includes(body.status)) throw new BadRequestException('Estado inválido');
+      patch.status = body.status;
+    }
+    await this.db.update(orders).set(patch).where(eq(orders.id, id));
     return this.getById(id);
   }
 

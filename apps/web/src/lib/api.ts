@@ -15,6 +15,7 @@ export type Product = {
   name: string;
   sku?: string | null;
   description?: string | null;
+  aiDescription?: string | null;
   category?: string | null;
   imageUrl?: string | null;
   imageUrls?: string[] | null;
@@ -23,8 +24,14 @@ export type Product = {
   minMayorQty: number;
   stock: string;
   featured: boolean;
+  active?: boolean;
+  priceLocked?: boolean;
+  descriptionSource?: string;
   company?: Company;
   companyId: string;
+  odooId?: number;
+  syncedAt?: string | null;
+  updatedAt?: string;
 };
 
 export type CatalogResponse = {

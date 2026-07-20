@@ -70,6 +70,7 @@ export async function bootstrapDatabase() {
           min_mayor_qty integer NOT NULL DEFAULT 6,
           stock numeric(14,2) NOT NULL DEFAULT 0,
           featured boolean NOT NULL DEFAULT false,
+          price_locked boolean NOT NULL DEFAULT false,
           active boolean NOT NULL DEFAULT true,
           synced_at timestamp,
           created_at timestamp NOT NULL DEFAULT now(),
@@ -166,6 +167,9 @@ export async function bootstrapDatabase() {
       .unsafe(
         `ALTER TABLE products ADD COLUMN IF NOT EXISTS description_source text NOT NULL DEFAULT 'odoo'`,
       )
+      .catch(() => {});
+    await client
+      .unsafe(`ALTER TABLE products ADD COLUMN IF NOT EXISTS price_locked boolean NOT NULL DEFAULT false`)
       .catch(() => {});
 
     await client

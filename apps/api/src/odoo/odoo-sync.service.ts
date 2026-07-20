@@ -112,17 +112,16 @@ export class OdooSyncService {
             category: p.categ_id ? p.categ_id[1] : null,
             imageUrl,
             imageUrls,
-            priceDetal: price,
-            priceMayor: price,
             stock: String(p.qty_available ?? 0),
             active: true,
-            descriptionSource: description ? 'odoo' : 'odoo',
             syncedAt: new Date(),
             updatedAt: new Date(),
           };
           if (needAi) {
             payload.aiDescription = null;
             payload.aiTags = [];
+            payload.description = null;
+            payload.descriptionSource = 'odoo';
           }
 
           const found = await this.db.query.products.findFirst({
@@ -132,15 +131,29 @@ export class OdooSyncService {
 
           if (found) {
             const setPayload: Record<string, unknown> = { ...payload };
-            if (!needAi && !description && found.description) {
+            // No pisar precios si el admin los bloqueó
+            if (!found.priceLocked) {
+              setPayload.priceDetal = price;
+              setPayload.priceMayor = price;
+            }
+            // No pisar descripción humana
+            if (!needAi && found.descriptionSource === 'human') {
               delete setPayload.description;
               delete setPayload.descriptionSource;
+            } else if (description) {
+              setPayload.descriptionSource = 'odoo';
             }
+            // featured / minMayorQty / active los controla el admin — no tocar en update
+            // (active solo se baja al purgar productos que ya no están en Odoo)
+            delete setPayload.active;
             await this.db.update(products).set(setPayload).where(eq(products.id, found.id));
           } else {
             await this.db.insert(products).values({
               companyId,
               odooId: p.id,
+              priceDetal: price,
+              priceMayor: price,
+              descriptionSource: description ? 'odoo' : 'odoo',
               ...payload,
             });
           }

@@ -6,8 +6,12 @@ export class OrdersController {
   constructor(private orders: OrdersService) {}
 
   @Get()
-  list(@Query('limit') limit?: string) {
-    return this.orders.list(Number(limit) || 50);
+  list(
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('q') q?: string,
+  ) {
+    return this.orders.list(Number(limit) || 80, { status, q });
   }
 
   @Get(':id')
@@ -23,5 +27,13 @@ export class OrdersController {
   @Patch(':id/status')
   status(@Param('id') id: string, @Body() body: { status: string }) {
     return this.orders.updateStatus(id, body.status);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() body: { notes?: string | null; status?: string },
+  ) {
+    return this.orders.updateMeta(id, body || {});
   }
 }

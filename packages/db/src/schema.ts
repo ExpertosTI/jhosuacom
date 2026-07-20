@@ -74,6 +74,8 @@ export const products = pgTable(
     minMayorQty: integer('min_mayor_qty').notNull().default(6),
     stock: numeric('stock', { precision: 14, scale: 2 }).notNull().default('0'),
     featured: boolean('featured').notNull().default(false),
+    /** Si true, sync Odoo no pisa priceDetal/priceMayor */
+    priceLocked: boolean('price_locked').notNull().default(false),
     active: boolean('active').notNull().default(true),
     syncedAt: timestamp('synced_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
