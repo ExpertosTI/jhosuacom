@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import { api, money } from '@/lib/api';
 import { token } from '@/components/AdminShell';
 
+type OrderItem = {
+  name: string;
+  quantity: string;
+  unitPrice?: string;
+  lineTotal?: string;
+  imageUrl?: string | null;
+};
+
 type Order = {
   id: string;
   number: string;
@@ -13,7 +21,7 @@ type Order = {
   status: string;
   odooSaleOrderName?: string | null;
   createdAt: string;
-  items?: Array<{ name: string; quantity: string }>;
+  items?: OrderItem[];
 };
 
 const STATUSES = ['received', 'quoted', 'confirmed', 'invoiced', 'cancelled'];
@@ -46,7 +54,7 @@ export default function AdminPedidosPage() {
         {orders.map((o) => (
           <div key={o.id} className="border border-gold/15 bg-ink-3/40 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-raj text-sm font-bold text-gold-light">{o.number}</p>
                 <p className="text-sm">
                   {o.customerName} · {o.customerPhone}
@@ -55,10 +63,34 @@ export default function AdminPedidosPage() {
                   {money(o.total)}
                   {o.odooSaleOrderName ? ` · Odoo ${o.odooSaleOrderName}` : ''}
                 </p>
-                {o.items && (
-                  <p className="mt-2 text-xs text-chrome-muted">
-                    {o.items.map((i) => `${i.quantity}× ${i.name}`).join(' · ')}
-                  </p>
+                {o.items && o.items.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {o.items.map((item, idx) => (
+                      <li key={`${o.id}-${idx}`} className="flex items-center gap-3">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden border border-gold/20 bg-ink-4">
+                          {item.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center font-display text-lg text-gold/25">
+                              {item.name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-chrome">{item.name}</p>
+                          <p className="font-raj text-[11px] uppercase tracking-wider text-chrome-muted">
+                            {item.quantity}×
+                            {item.unitPrice ? ` ${money(item.unitPrice)}` : ''}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
               <select

@@ -11,6 +11,7 @@ import {
   RefreshCw,
   LogOut,
   Wallet,
+  MessageCircle,
 } from 'lucide-react';
 
 const NAV = [
@@ -19,6 +20,7 @@ const NAV = [
   { href: '/admin/productos', label: 'Productos', icon: Package },
   { href: '/admin/clientes', label: 'Clientes', icon: Users },
   { href: '/admin/deudas', label: 'Deudas', icon: Wallet },
+  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { href: '/admin/odoo', label: 'Odoo', icon: RefreshCw },
 ];
 

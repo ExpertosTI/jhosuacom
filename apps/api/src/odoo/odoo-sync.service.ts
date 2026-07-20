@@ -74,11 +74,16 @@ export class OdooSyncService {
         const rows = await this.odoo.fetchProducts(undefined, oc.id);
         for (const p of rows) {
           const price = String(p.list_price ?? 0);
+          const imageUrl =
+            typeof p.image_128 === 'string' && p.image_128.length > 20
+              ? `data:image/jpeg;base64,${p.image_128}`
+              : null;
           const payload = {
             sku: p.default_code || null,
             name: p.name,
             description: p.description_sale || null,
             category: p.categ_id ? p.categ_id[1] : null,
+            imageUrl,
             priceDetal: price,
             priceMayor: price,
             stock: String(p.qty_available ?? 0),

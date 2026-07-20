@@ -124,6 +124,7 @@ export async function bootstrapDatabase() {
           odoo_product_id integer,
           name text NOT NULL,
           sku text,
+          image_url text,
           quantity numeric(14,2) NOT NULL,
           unit_price numeric(14,2) NOT NULL,
           line_total numeric(14,2) NOT NULL
@@ -147,6 +148,9 @@ export async function bootstrapDatabase() {
       `);
       console.log('✅ Schema creado');
     }
+
+    // Migraciones ligeras (DB ya existente)
+    await client.unsafe(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS image_url text`).catch(() => {});
 
     const db = drizzle(client, { schema });
     const productRows = await client`SELECT id FROM products LIMIT 1`;

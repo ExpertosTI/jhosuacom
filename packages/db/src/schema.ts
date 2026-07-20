@@ -140,6 +140,7 @@ export const orderItems = pgTable('order_items', {
   odooProductId: integer('odoo_product_id'),
   name: text('name').notNull(),
   sku: text('sku'),
+  imageUrl: text('image_url'),
   quantity: numeric('quantity', { precision: 14, scale: 2 }).notNull(),
   unitPrice: numeric('unit_price', { precision: 14, scale: 2 }).notNull(),
   lineTotal: numeric('line_total', { precision: 14, scale: 2 }).notNull(),

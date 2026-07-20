@@ -137,6 +137,7 @@ export class OrdersService {
         odooProductId: line.product.odooId,
         name: line.product.name,
         sku: line.product.sku,
+        imageUrl: line.product.imageUrl || null,
         quantity: String(line.qty),
         unitPrice: String(line.unitPrice),
         lineTotal: String(line.lineTotal),
@@ -207,30 +208,52 @@ export class OrdersService {
     return this.getById(order.id);
   }
 
+  private withItemImages(order: any) {
+    if (!order?.items?.length) return order;
+    return {
+      ...order,
+      items: order.items.map((item: any) => ({
+        ...item,
+        imageUrl: item.imageUrl || item.product?.imageUrl || null,
+      })),
+    };
+  }
+
   async list(limit = 50) {
-    return this.db.query.orders.findMany({
+    const rows = await this.db.query.orders.findMany({
       orderBy: [desc(orders.createdAt)],
       limit,
-      with: { items: true, company: true },
+      with: {
+        items: { with: { product: true } },
+        company: true,
+      },
     });
+    return rows.map((o: any) => this.withItemImages(o));
   }
 
   async getById(id: string) {
     const order = await this.db.query.orders.findFirst({
       where: eq(orders.id, id),
-      with: { items: true, company: true, customer: true },
+      with: {
+        items: { with: { product: true } },
+        company: true,
+        customer: true,
+      },
     });
     if (!order) throw new NotFoundException('Pedido no encontrado');
-    return order;
+    return this.withItemImages(order);
   }
 
   async getByNumber(number: string) {
     const order = await this.db.query.orders.findFirst({
       where: eq(orders.number, number),
-      with: { items: true, company: true },
+      with: {
+        items: { with: { product: true } },
+        company: true,
+      },
     });
     if (!order) throw new NotFoundException('Pedido no encontrado');
-    return order;
+    return this.withItemImages(order);
   }
 
   async updateStatus(id: string, status: string) {

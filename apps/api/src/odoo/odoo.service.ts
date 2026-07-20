@@ -78,15 +78,46 @@ export class OdooService {
     return uid as number;
   }
 
-  async testConnection(): Promise<{ ok: boolean; uid?: number; message: string; mock: boolean }> {
+  async testConnection(): Promise<{
+    ok: boolean;
+    uid?: number;
+    message: string;
+    mock: boolean;
+    url?: string;
+    database?: string;
+    username?: string;
+  }> {
+    const cfg = this.getConfig();
     if (this.isMock()) {
-      return { ok: true, mock: true, message: 'Modo mock activo (sin API key Odoo)' };
+      return {
+        ok: true,
+        mock: true,
+        message: 'Modo mock activo (sin API key Odoo)',
+        url: cfg.url || undefined,
+        database: cfg.database || undefined,
+        username: cfg.username || undefined,
+      };
     }
     try {
-      const uid = await this.authenticate(this.getConfig());
-      return { ok: true, uid, mock: false, message: 'Conectado a Odoo' };
+      const uid = await this.authenticate(cfg);
+      return {
+        ok: true,
+        uid,
+        mock: false,
+        message: 'Conectado a Odoo',
+        url: cfg.url,
+        database: cfg.database,
+        username: cfg.username,
+      };
     } catch (e: any) {
-      return { ok: false, mock: false, message: e.message || 'Error de conexión' };
+      return {
+        ok: false,
+        mock: false,
+        message: e.message || 'Error de conexión',
+        url: cfg.url,
+        database: cfg.database,
+        username: cfg.username,
+      };
     }
   }
 
@@ -172,6 +203,7 @@ export class OdooService {
             'qty_available',
             'categ_id',
             'company_id',
+            'image_128',
           ],
         },
       ]);
