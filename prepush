@@ -1,18 +1,26 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🚀 Iniciando Protocolo Pre-Push (JhosuaComercial)..."
+BRANCH="${1:-feat/jh-hogar-mvp}"
 
-# 1. En este caso es estático, no hay build de npm.
-# Pero si lo hubiera, aquí iría: npm run build
+echo "🚀 Pre-push JH Hogar → $BRANCH"
 
-# 2. Sincronizar con Git
-echo "📤 Sincronizando repositorio..."
-git add .
-git commit -m "deploy: update maintenance $(date +'%Y-%m-%d %H:%M:%S')" || echo "ℹ️ No hay cambios para commitear."
+echo "🔨 Build check..."
+pnpm --filter @jhosua/db build
+pnpm --filter @jhosua/api build
+pnpm --filter @jhosua/web build
 
-echo "🛰️  Enviando a GitHub..."
-git push origin main
+echo "📤 Git sync..."
+git add -A
+git status --short
 
-echo "✅ Proceso local completado."
-echo "🚀 Ahora puedes ir al VPS, entrar en la carpeta y ejecutar ./deploy.sh"
+if git diff --cached --quiet; then
+  echo "ℹ️  Sin cambios nuevos"
+else
+  git commit -m "chore: prepush build $(date +'%Y-%m-%d %H:%M:%S')"
+fi
+
+git push -u origin "$BRANCH"
+
+echo "✅ Push OK"
+echo "En el VPS: cd /opt/jhosuacom && DEPLOY_BRANCH=$BRANCH ./deploy.sh"

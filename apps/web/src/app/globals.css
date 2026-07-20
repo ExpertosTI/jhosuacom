@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-bebas: 'Bebas Neue', sans-serif;
+  --font-rajdhani: 'Rajdhani', sans-serif;
+  --font-dm: 'DM Sans', sans-serif;
+  --g: #c9952a;
+  --gl: #f5c842;
+  --bg: #080808;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: #d4dce8;
+  font-family: var(--font-dm);
+  min-height: 100vh;
+}
+
+/* ambient grid */
+.jh-grid {
+  background-image:
+    linear-gradient(rgba(201, 149, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 149, 42, 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 40%, transparent 100%);
+}
+
+.jh-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.06) 3px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #f5c842 0%, #c9952a 45%, #8a6a20 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}

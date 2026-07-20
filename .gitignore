@@ -4,7 +4,14 @@
 node_modules/
 dist/
 .next/
+.turbo
 .env
 .env.local
 docker-compose.v.yml
 maintenance.tar.gz
+*.log
+.pnpm-store
+apps/api/dist/
+apps/web/.next/
+packages/db/dist/
+packages/db/drizzle/

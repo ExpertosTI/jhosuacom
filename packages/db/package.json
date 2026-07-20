@@ -1,0 +1,28 @@
+{
+  "name": "@jhosua/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts src/schema.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts src/schema.ts --format cjs,esm --watch --dts",
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.4",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.31.4",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.0.0"
+  }
+}
