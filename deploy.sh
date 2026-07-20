@@ -127,6 +127,9 @@ sleep 3
 echo "🚢 Stack deploy (yaml directo, sin compose config)..."
 docker stack deploy -c docker-compose.yml "$STACK"
 
+# Terminal probó: --no-healthcheck → 1/1 running; stack deploy con healthcheck → exit 137
+docker service update --no-healthcheck "${STACK}_api" 2>/dev/null || true
+
 # Quitar routers Traefik viejos del API (PathPrefix) si quedaron
 docker service update --label-rm traefik.enable \
   --label-rm traefik.http.routers.jhosua-api.rule \
