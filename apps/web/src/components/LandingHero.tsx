@@ -39,7 +39,6 @@ export function LandingHero() {
 
   return (
     <>
-      {/* HERO — una composición: marca + línea + CTA */}
       <section className="relative flex min-h-[92vh] flex-col justify-end overflow-hidden px-6 pb-16 pt-28 md:px-10 md:pb-20">
         <motion.div
           aria-hidden
@@ -115,13 +114,19 @@ export function LandingHero() {
         </div>
       </section>
 
-      {/* OFERTAS — slider ejecutivo */}
       {offers.length > 0 && <OffersSlider products={offers} />}
 
-      {/* EMPRESAS — una sección, un propósito */}
       {companies.length > 0 && (
-        <section className="px-6 py-20 md:px-10">
-          <div className="mx-auto max-w-6xl">
+        <section className="relative overflow-hidden px-6 py-20 md:px-10">
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-40"
+            style={{
+              background:
+                'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(201,149,42,0.08), transparent 60%)',
+            }}
+          />
+          <div className="relative z-10 mx-auto max-w-6xl">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -136,27 +141,39 @@ export function LandingHero() {
                 Líneas <span className="text-gradient-gold">JH</span>
               </h2>
               <p className="mt-3 text-sm text-chrome-muted">
-                Cada empresa con su catálogo. Elige la línea y cotiza al instante.
+                Mismo catálogo por línea. Elige empresa y cotiza al instante.
               </p>
             </motion.div>
 
-            <div className="mt-12 divide-y divide-gold/10 border-y border-gold/10">
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {companies.map((c, i) => (
                 <motion.div
                   key={c.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.06, duration: 0.4 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-40px' }}
+                  transition={{ delay: i * 0.05, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <Link
                     href={`/tienda?empresa=${c.slug}`}
-                    className="group flex items-center justify-between gap-4 py-6 transition hover:bg-gold/[0.03]"
+                    className="group relative flex h-full min-h-[140px] flex-col justify-end overflow-hidden border border-gold/15 bg-gradient-to-br from-ink-3/90 to-ink-2/80 p-5 transition hover:border-gold/40 hover:shadow-gold"
                   >
-                    <span className="font-display text-3xl tracking-wide text-chrome transition group-hover:text-gradient-gold md:text-4xl">
+                    {c.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.logoUrl}
+                        alt=""
+                        className="pointer-events-none absolute right-3 top-3 h-14 w-14 object-contain opacity-90 transition duration-500 group-hover:scale-110"
+                      />
+                    ) : (
+                      <span className="pointer-events-none absolute right-4 top-4 font-display text-4xl text-gold/15 transition group-hover:text-gold/25">
+                        {c.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="relative font-display text-2xl leading-tight tracking-wide text-chrome transition group-hover:text-gradient-gold md:text-3xl">
                       {c.name}
                     </span>
-                    <span className="font-raj text-[10px] font-bold uppercase tracking-[0.3em] text-chrome-muted transition group-hover:text-gold-light">
+                    <span className="relative mt-3 font-raj text-[10px] font-bold uppercase tracking-[0.28em] text-chrome-muted transition group-hover:text-gold-light">
                       Ver catálogo →
                     </span>
                   </Link>
@@ -167,7 +184,6 @@ export function LandingHero() {
         </section>
       )}
 
-      {/* DESTACADOS */}
       {featured.length > 0 && (
         <section className="border-t border-gold/10 bg-ink-2/30 px-6 py-20 md:px-10">
           <div className="mx-auto max-w-6xl">
@@ -196,7 +212,6 @@ export function LandingHero() {
         </section>
       )}
 
-      {/* CTA final */}
       <section className="px-6 py-24 text-center md:px-10">
         <motion.div
           initial={{ opacity: 0, y: 12 }}

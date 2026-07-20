@@ -141,12 +141,18 @@ export default function AdminOdooPage() {
         mock: boolean;
         companies: number;
         products: number;
+        purged?: number;
+        enrich?: { enriched?: number; skipped?: boolean };
         message?: string;
       }>('/odoo/sync', { method: 'POST', token: token() });
+      const enrichBit =
+        res.enrich && !res.enrich.skipped
+          ? ` · IA: ${res.enrich.enriched ?? 0} descripciones`
+          : '';
       setSyncResult(
         res.mock
           ? res.message || 'Modo mock — no se sincronizó'
-          : `OK: ${res.companies} empresas, ${res.products} productos (con galería)`,
+          : `OK: ${res.companies} empresas, ${res.products} productos, ${res.purged ?? 0} obsoletos${enrichBit}`,
       );
       await load();
     } catch (e: any) {
@@ -270,7 +276,7 @@ export default function AdminOdooPage() {
           {status?.mock
             ? 'Mock activo — desmarca mock y guarda URL/DB/usuario/API key'
             : status?.ok
-              ? 'Live — sync importa imagen principal + galería product.image'
+              ? 'Live — sync: logos empresa, fotos producto, purge de obsoletos + IA'
               : 'Error de conexión — revisa los datos y prueba de nuevo'}
         </p>
         {(status?.url || status?.database) && (
@@ -287,19 +293,20 @@ export default function AdminOdooPage() {
           disabled={loading || Boolean(status?.mock)}
           className="mt-6 bg-gold px-6 py-3 font-raj text-xs font-bold uppercase tracking-widest text-ink disabled:opacity-60"
         >
-          {loading ? 'Sincronizando...' : 'Sincronizar productos'}
+          {loading ? 'Sincronizando...' : 'Sincronizar (purge + logos + IA)'}
         </button>
         {syncResult && <p className="mt-4 text-sm text-chrome">{syncResult}</p>}
       </div>
 
       <div className="mt-6 space-y-2 text-sm text-chrome-muted">
         <p>
-          En Odoo: pestaña <strong className="text-chrome">JH Hogar Web</strong> → sube varias fotos
-          (imagen principal + galería). Luego sincroniza aquí.
+          Sync consulta solo productos <span className="text-chrome">activos/vendibles</span> en
+          Odoo, importa logos de empresa e imágenes, desactiva lo que ya no está, y genera
+          descripciones con Gemini si faltan.
         </p>
         <p>
-          Opcional: puedes dejar valores en .env como respaldo; lo guardado en este panel tiene
-          prioridad.
+          En Odoo (módulo JH): pestaña <span className="text-chrome">JH Hogar Web</span> → fotos,
+          descripción web y botón «Pedir descripción IA».
         </p>
       </div>
     </div>

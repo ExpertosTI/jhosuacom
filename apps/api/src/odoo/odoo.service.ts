@@ -28,6 +28,8 @@ export type OdooStoredSettings = {
 export interface OdooCompany {
   id: number;
   name: string;
+  logo?: string | false;
+  logoUrl?: string | null;
 }
 
 export interface OdooProduct {
@@ -41,6 +43,8 @@ export interface OdooProduct {
   company_id: [number, string] | false;
   image_128?: string | false;
   product_template_image_ids?: number[];
+  jh_website_description?: string | false;
+  jh_need_ai_description?: boolean;
   /** Imágenes resueltas (base64 sin data: prefix) — principal + galería */
   images?: string[];
 }
@@ -250,9 +254,9 @@ export class OdooService {
     const cfg = config ?? (await this.resolveConfig());
     if (cfg.mock) {
       return [
-        { id: 1, name: 'JH Hogar' },
-        { id: 2, name: 'Electro JH' },
-        { id: 3, name: 'Muebles JH' },
+        { id: 1, name: 'JH Hogar', logoUrl: null },
+        { id: 2, name: 'Electro JH', logoUrl: null },
+        { id: 3, name: 'Muebles JH', logoUrl: null },
       ];
     }
     const uid = await this.authenticate(cfg);
@@ -268,16 +272,28 @@ export class OdooService {
       { limit: 50 },
     ]);
     if (!ids?.length) return [];
-    const rows = await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
+
+    const fields = ['id', 'name'];
+    if (await this.hasField(cfg, uid, 'res.company', 'logo')) fields.push('logo');
+
+    const rows = (await this.jsonRpc(cfg.url, 'object', 'execute_kw', [
       cfg.database,
       uid,
       cfg.apiKey,
       'res.company',
       'read',
       [ids],
-      { fields: ['id', 'name'] },
-    ]);
-    return rows as OdooCompany[];
+      { fields },
+    ])) as OdooCompany[];
+
+    return rows.map((c) => ({
+      id: c.id,
+      name: c.name,
+      logoUrl:
+        typeof c.logo === 'string' && c.logo.length > 20
+          ? `data:image/png;base64,${c.logo}`
+          : null,
+    }));
   }
 
   async fetchProducts(companyId?: number, config?: OdooRuntimeConfig): Promise<OdooProduct[]> {
@@ -287,13 +303,18 @@ export class OdooService {
     const uid = await this.authenticate(cfg);
 
     const catalogProductIds = await this.fetchCatalogProductIds(cfg, uid, companyId);
-    const domain: any[] = [['sale_ok', '=', true]];
+    // Solo productos activos y vendibles (disponibles en Odoo)
+    const domain: any[] = [
+      ['sale_ok', '=', true],
+      ['active', '=', true],
+    ];
     if (catalogProductIds !== null) {
       if (!catalogProductIds.length) return [];
       domain.push(['id', 'in', catalogProductIds]);
     } else if (await this.hasField(cfg, uid, 'product.template', 'jh_show_on_website')) {
       domain.push(['jh_show_on_website', '=', true]);
     }
+    // Multi-empresa: productos de la compañía + compartidos (company_id=False) — mismo catálogo
     if (companyId) domain.push(['company_id', 'in', [false, companyId]]);
 
     const hasExtraImages = await this.hasField(
@@ -301,6 +322,18 @@ export class OdooService {
       uid,
       'product.template',
       'product_template_image_ids',
+    );
+    const hasJhDesc = await this.hasField(
+      cfg,
+      uid,
+      'product.template',
+      'jh_website_description',
+    );
+    const hasNeedAi = await this.hasField(
+      cfg,
+      uid,
+      'product.template',
+      'jh_need_ai_description',
     );
 
     const fields = [
@@ -314,6 +347,8 @@ export class OdooService {
       'company_id',
       'image_128',
       ...(hasExtraImages ? ['product_template_image_ids'] : []),
+      ...(hasJhDesc ? ['jh_website_description'] : []),
+      ...(hasNeedAi ? ['jh_need_ai_description'] : []),
     ];
 
     const all: OdooProduct[] = [];
@@ -607,6 +642,44 @@ export class OdooService {
       { fields: ['id', 'name', 'state'] },
     ]);
     return rows?.[0] || null;
+  }
+
+  /** Escribe descripción/tags IA y limpia flag jh_need_ai_description en Odoo. */
+  async writeProductAiFields(
+    odooProductId: number,
+    data: { aiDescription?: string; aiTags?: string[]; clearNeedAi?: boolean },
+  ) {
+    const config = await this.resolveConfig();
+    if (config.mock || !odooProductId) return { ok: false };
+    try {
+      const uid = await this.authenticate(config);
+      const vals: Record<string, unknown> = {};
+      if (await this.hasField(config, uid, 'product.template', 'jh_ai_description') && data.aiDescription) {
+        vals.jh_ai_description = data.aiDescription;
+      }
+      if (await this.hasField(config, uid, 'product.template', 'jh_ai_tags') && data.aiTags) {
+        vals.jh_ai_tags = data.aiTags.join(', ');
+      }
+      if (
+        data.clearNeedAi &&
+        (await this.hasField(config, uid, 'product.template', 'jh_need_ai_description'))
+      ) {
+        vals.jh_need_ai_description = false;
+      }
+      if (!Object.keys(vals).length) return { ok: true, skipped: true };
+      await this.jsonRpc(config.url, 'object', 'execute_kw', [
+        config.database,
+        uid,
+        config.apiKey,
+        'product.template',
+        'write',
+        [[odooProductId], vals],
+      ]);
+      return { ok: true };
+    } catch (e: any) {
+      this.logger.warn(`writeProductAiFields ${odooProductId}: ${e.message}`);
+      return { ok: false, error: e.message };
+    }
   }
 
   /** Helper para sync: convierte lista base64 → data URLs */

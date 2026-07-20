@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { eq } from 'drizzle-orm';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { companies, products, syncLogs } from '@jhosua/db';
 import { DRIZZLE } from '../database/database.module';
 import { OdooService } from './odoo.service';
@@ -13,6 +13,17 @@ function slugify(name: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
     .slice(0, 64);
+}
+
+function productDescription(p: {
+  jh_website_description?: string | false;
+  description_sale?: string | false;
+}) {
+  const jh =
+    typeof p.jh_website_description === 'string' ? p.jh_website_description.trim() : '';
+  if (jh) return jh;
+  const sale = typeof p.description_sale === 'string' ? p.description_sale.trim() : '';
+  return sale || null;
 }
 
 @Injectable()
@@ -38,6 +49,7 @@ export class OdooSyncService {
           mock: true,
           companies: 0,
           products: 0,
+          purged: 0,
           message: 'Modo mock: no se sincronizó con Odoo',
         };
       }
@@ -46,8 +58,11 @@ export class OdooSyncService {
       const odooCompanies = await this.odoo.fetchCompanies(cfg);
       let companyCount = 0;
       let productCount = 0;
+      let purged = 0;
+      const syncedCompanyOdooIds: number[] = [];
 
       for (const [idx, oc] of odooCompanies.entries()) {
+        syncedCompanyOdooIds.push(oc.id);
         const slug = slugify(oc.name) || `company-${oc.id}`;
         const existing = await this.db.query.companies.findFirst({
           where: eq(companies.odooId, oc.id),
@@ -57,7 +72,12 @@ export class OdooSyncService {
         if (existing) {
           await this.db
             .update(companies)
-            .set({ name: oc.name, updatedAt: new Date(), active: true })
+            .set({
+              name: oc.name,
+              logoUrl: oc.logoUrl ?? existing.logoUrl,
+              updatedAt: new Date(),
+              active: true,
+            })
             .where(eq(companies.id, existing.id));
           companyId = existing.id;
         } else {
@@ -67,6 +87,7 @@ export class OdooSyncService {
               odooId: oc.id,
               name: oc.name,
               slug,
+              logoUrl: oc.logoUrl || null,
               sortOrder: idx + 1,
             })
             .returning();
@@ -75,13 +96,19 @@ export class OdooSyncService {
         companyCount++;
 
         const rows = await this.odoo.fetchProducts(oc.id, cfg);
+        const keepOdooIds: number[] = [];
+
         for (const p of rows) {
+          keepOdooIds.push(p.id);
           const price = String(p.list_price ?? 0);
           const { imageUrl, imageUrls } = OdooService.imagesToUrls(p.images);
-          const payload = {
+          const needAi = Boolean(p.jh_need_ai_description);
+          let description = productDescription(p);
+          if (needAi) description = null; // forzar regeneración IA
+          const payload: Record<string, unknown> = {
             sku: p.default_code || null,
             name: p.name,
-            description: p.description_sale || null,
+            description,
             category: p.categ_id ? p.categ_id[1] : null,
             imageUrl,
             imageUrls,
@@ -89,17 +116,27 @@ export class OdooSyncService {
             priceMayor: price,
             stock: String(p.qty_available ?? 0),
             active: true,
+            descriptionSource: description ? 'odoo' : 'odoo',
             syncedAt: new Date(),
             updatedAt: new Date(),
           };
+          if (needAi) {
+            payload.aiDescription = null;
+            payload.aiTags = [];
+          }
 
           const found = await this.db.query.products.findFirst({
-            where: (pr: any, { and, eq: e }: any) =>
-              and(e(pr.companyId, companyId), e(pr.odooId, p.id)),
+            where: (pr: any, { and: a, eq: e }: any) =>
+              a(e(pr.companyId, companyId), e(pr.odooId, p.id)),
           });
 
           if (found) {
-            await this.db.update(products).set(payload).where(eq(products.id, found.id));
+            const setPayload: Record<string, unknown> = { ...payload };
+            if (!needAi && !description && found.description) {
+              delete setPayload.description;
+              delete setPayload.descriptionSource;
+            }
+            await this.db.update(products).set(setPayload).where(eq(products.id, found.id));
           } else {
             await this.db.insert(products).values({
               companyId,
@@ -109,6 +146,34 @@ export class OdooSyncService {
           }
           productCount++;
         }
+
+        // Borrar/desactivar productos que ya no están disponibles en Odoo para esta empresa
+        if (keepOdooIds.length) {
+          const stale = await this.db
+            .update(products)
+            .set({ active: false, updatedAt: new Date() })
+            .where(
+              and(eq(products.companyId, companyId), notInArray(products.odooId, keepOdooIds)),
+            )
+            .returning({ id: products.id });
+          purged += stale?.length || 0;
+        } else {
+          // Catálogo vacío en Odoo → desactivar todos de la empresa
+          const stale = await this.db
+            .update(products)
+            .set({ active: false, updatedAt: new Date() })
+            .where(and(eq(products.companyId, companyId), eq(products.active, true)))
+            .returning({ id: products.id });
+          purged += stale?.length || 0;
+        }
+      }
+
+      // Empresas que ya no vienen de Odoo → inactivas
+      if (syncedCompanyOdooIds.length) {
+        await this.db
+          .update(companies)
+          .set({ active: false, updatedAt: new Date() })
+          .where(notInArray(companies.odooId, syncedCompanyOdooIds));
       }
 
       let enrichMeta: Record<string, unknown> | null = null;
@@ -116,7 +181,11 @@ export class OdooSyncService {
         const { AiEnrichmentService } = await import('../ai/ai-enrichment.service');
         const enrich = this.moduleRef.get(AiEnrichmentService, { strict: false });
         if (enrich) {
-          enrichMeta = (await enrich.enrichProducts(25)) as Record<string, unknown>;
+          // Tras sync: generar descripciones AI (hasta 40) si hay Gemini
+          enrichMeta = (await enrich.enrichProducts(40, { forceAfterSync: true })) as Record<
+            string,
+            unknown
+          >;
         }
       } catch (e: any) {
         this.logger.warn(`AI enrich post-sync: ${e.message}`);
@@ -129,7 +198,9 @@ export class OdooSyncService {
         meta: {
           companies: companyCount,
           products: productCount,
-          source: 'jh.website.catalog | jh_show_on_website | sale_ok',
+          purged,
+          logos: true,
+          source: 'jh.website.catalog | jh_show_on_website | sale_ok+active',
           images: true,
           enrich: enrichMeta,
         },
@@ -139,8 +210,9 @@ export class OdooSyncService {
         mock: false,
         companies: companyCount,
         products: productCount,
+        purged,
         enrich: enrichMeta,
-        message: `Sync OK: ${productCount} productos (con galería de imágenes)`,
+        message: `Sync OK: ${productCount} productos, ${purged} obsoletos desactivados, logos + IA`,
       };
     } catch (e: any) {
       this.logger.error(e);

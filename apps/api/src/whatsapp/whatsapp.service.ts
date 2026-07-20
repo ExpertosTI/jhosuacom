@@ -75,6 +75,13 @@ export class WhatsAppService {
     return digits;
   }
 
+  private normalizeState(raw: unknown, httpOk: boolean): string | null {
+    if (!httpOk) return 'close';
+    const s = String(raw || '').toLowerCase().trim();
+    if (!s || s === '404' || s === 'not found' || /^\d+$/.test(s)) return 'close';
+    return s;
+  }
+
   async getStatus() {
     const instance = this.instance();
     const configured = this.enabled();
@@ -88,12 +95,13 @@ export class WhatsAppService {
       };
     }
 
-    const res = await this.evo(`/instance/connectionState/${instance}`);
-    const state =
+    const res = await this.evo(`/instance/connectionState/${encodeURIComponent(instance)}`);
+    const raw =
       res.data?.instance?.state ||
       res.data?.state ||
-      res.data?.status ||
-      (res.ok ? null : 'close');
+      res.data?.connectionState ||
+      null;
+    const state = this.normalizeState(raw ?? (res.ok ? null : 'close'), res.ok);
 
     return {
       configured: true,
@@ -101,6 +109,7 @@ export class WhatsAppService {
       connectionState: state,
       phone: res.data?.instance?.owner || res.data?.owner || null,
       apiUrl: this.baseUrl(),
+      error: res.ok ? null : res.error,
     };
   }
 
@@ -109,9 +118,10 @@ export class WhatsAppService {
     if (!this.enabled()) {
       return { state: null, error: 'Evolution no configurado' };
     }
-    const res = await this.evo(`/instance/connectionState/${instance}`);
-    const state =
-      res.data?.instance?.state || res.data?.state || res.data?.status || null;
+    const res = await this.evo(`/instance/connectionState/${encodeURIComponent(instance)}`);
+    const raw =
+      res.data?.instance?.state || res.data?.state || res.data?.connectionState || null;
+    const state = this.normalizeState(raw, res.ok);
     return { state, error: res.ok ? null : res.error };
   }
 
@@ -121,7 +131,36 @@ export class WhatsAppService {
       return { ok: false, qr: null as string | null, error: 'Evolution no configurado en el servidor' };
     }
 
-    // Create if missing (ignore "already exists")
+    const live = await this.evo(`/instance/connectionState/${encodeURIComponent(instance)}`);
+    if (live.ok) {
+      const state = this.normalizeState(
+        live.data?.instance?.state || live.data?.state || live.data?.connectionState,
+        true,
+      );
+      if (state === 'open') {
+        return { ok: true, qr: null, error: null, alreadyConnected: true };
+      }
+    }
+
+    // Prefer connect (instancia ya existe en evoapi)
+    const connected = await this.evo(`/instance/connect/${encodeURIComponent(instance)}`);
+    let qr = this.extractQr(connected.data);
+    if (qr) return { ok: true, qr, error: null };
+
+    const missing =
+      connected.status === 404 ||
+      live.status === 404 ||
+      /not found/i.test(String(connected.error || live.error || ''));
+
+    if (!missing && !connected.ok) {
+      return {
+        ok: false,
+        qr: null,
+        error: connected.error || live.error || 'No se pudo conectar la instancia',
+      };
+    }
+
+    // Crear instancia si no existe
     const created = await this.evo('/instance/create', {
       method: 'POST',
       body: JSON.stringify({
@@ -130,19 +169,16 @@ export class WhatsAppService {
         integration: 'WHATSAPP-BAILEYS',
       }),
     });
+    qr = this.extractQr(created.data);
+    if (qr) return { ok: true, qr, error: null };
 
-    let qr = this.extractQr(created.data);
-    if (qr) {
-      return { ok: true, qr, error: null };
+    if (created.ok || /already|exist/i.test(String(created.error || ''))) {
+      await new Promise((r) => setTimeout(r, 800));
+      const again = await this.evo(`/instance/connect/${encodeURIComponent(instance)}`);
+      qr = this.extractQr(again.data);
+      if (qr) return { ok: true, qr, error: null };
     }
 
-    const connected = await this.evo(`/instance/connect/${instance}`);
-    qr = this.extractQr(connected.data);
-    if (qr) {
-      return { ok: true, qr, error: null };
-    }
-
-    // Already open?
     const st = await this.getConnectionState();
     if (st.state === 'open') {
       return { ok: true, qr: null, error: null, alreadyConnected: true };
@@ -151,7 +187,7 @@ export class WhatsAppService {
     return {
       ok: false,
       qr: null,
-      error: connected.error || created.error || 'No se pudo obtener QR',
+      error: created.error || connected.error || 'No se pudo obtener QR',
     };
   }
 

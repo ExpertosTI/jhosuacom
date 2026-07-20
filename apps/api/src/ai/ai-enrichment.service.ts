@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import { products } from '@jhosua/db';
 import { DRIZZLE } from '../database/database.module';
+import { OdooService } from '../odoo/odoo.service';
 import { generateGeminiText } from './gemini.client';
 import { AiSettingsService } from './ai-settings.service';
 
@@ -12,13 +13,17 @@ export class AiEnrichmentService {
   constructor(
     @Inject(DRIZZLE) private db: any,
     private settings: AiSettingsService,
+    private odoo: OdooService,
   ) {}
 
   /** Enriquece productos sin descripción humana (post-sync). */
-  async enrichProducts(limit = 25) {
+  async enrichProducts(limit = 25, opts?: { forceAfterSync?: boolean }) {
     const cfg = await this.settings.resolve();
-    if (!cfg.enabled || !cfg.enrichOnSync || !cfg.apiKey) {
-      return { skipped: true, enriched: 0 };
+    if (!cfg.apiKey) {
+      return { skipped: true, enriched: 0, reason: 'ai_off_or_no_key' };
+    }
+    if (!opts?.forceAfterSync && (!cfg.enabled || !cfg.enrichOnSync)) {
+      return { skipped: true, enriched: 0, reason: 'ai_off_or_no_key' };
     }
 
     const rows = await this.db.query.products.findMany({
@@ -48,7 +53,7 @@ export class AiEnrichmentService {
         const aiDescription = (descMatch?.[1] || result.text).trim().slice(0, 500);
         const aiTags = (tagsMatch?.[1] || '')
           .split(',')
-          .map((t) => t.trim())
+          .map((t: string) => t.trim())
           .filter(Boolean)
           .slice(0, 8);
 
@@ -61,6 +66,14 @@ export class AiEnrichmentService {
             updatedAt: new Date(),
           })
           .where(eq(products.id, p.id));
+
+        if (p.odooId) {
+          await this.odoo.writeProductAiFields(p.odooId, {
+            aiDescription,
+            aiTags,
+            clearNeedAi: true,
+          });
+        }
         enriched++;
       } catch (e: any) {
         this.logger.warn(`enrich ${p.id}: ${e.message}`);

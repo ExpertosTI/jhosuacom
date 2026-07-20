@@ -115,18 +115,27 @@ function TiendaInner() {
         </p>
       )}
 
-      {grouped.map(([slug, group]) => (
+      {grouped.map(([slug, group]) => {
+        const co = data?.companies.find((c) => c.slug === slug);
+        return (
         <section key={slug} className="mb-14">
-          <h2 className="mb-5 border-b border-gold/15 pb-3 font-display text-3xl tracking-wide text-gradient-gold">
-            {group.name}
-          </h2>
+          <div className="mb-5 flex items-center gap-3 border-b border-gold/15 pb-3">
+            {co?.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={co.logoUrl} alt="" className="h-10 w-10 object-contain" />
+            )}
+            <h2 className="font-display text-3xl tracking-wide text-gradient-gold">
+              {group.name}
+            </h2>
+          </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {group.products.map((p) => (
               <ProductCard key={p.id} product={p} priceMode={priceMode} />
             ))}
           </div>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

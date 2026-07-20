@@ -167,9 +167,21 @@ export default function AdminWhatsAppPage() {
           </div>
           <div className="mt-4 space-y-1 font-raj text-[11px] uppercase tracking-wider text-chrome-muted">
             <p>Instancia: {status?.instanceName || 'jhhogar'}</p>
-            <p>Estado: {status?.connectionState || '—'}</p>
+            <p>
+              Estado:{' '}
+              {open
+                ? 'open'
+                : status?.connectionState === 'close'
+                  ? 'sin vincular'
+                  : status?.connectionState || '—'}
+            </p>
             {status?.phone && <p>Número: {status.phone}</p>}
           </div>
+          {status?.configured && !open && (
+            <p className="mt-3 text-xs text-chrome-muted">
+              Si ves errores previos de 404, pulsa Generar QR: crea/conecta la instancia automáticamente.
+            </p>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-2">
             <button
